@@ -1,44 +1,51 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using GameObjects;
+using static GameObjects.Geometry;
 using System;
+using Physics2D.Collisions.Colliders;
+using System.Collections.Generic;
+using MyLibrary.InputManager;
+using Physics2D.Movement;
+using Physics2D.Movement.Area;
 
-namespace Entity;
+namespace GameObjects.Entity;
 
 public class Paddle : Entity
 {
-    
-    private Vector2 _position;
     private Vector2 _size;
     private float _speed;
 
-    private Texture2D _pixel;
     private Rectangle _rectangle;
     private Color _currentColor;
     private Color _initialColor;
 
-    public Paddle(Texture2D pixel, Vector2 position, Vector2 size, Color color, float speed = 5f)
+    private MovementArea _movementArea;
+
+    public Paddle(Texture2D pixel, Vector2 position, Vector2 size, Color color, Collider collider, MovementArea movementArea, float speed = 0f) : base(pixel, position, collider)
     {
-        _pixel = pixel;
-        _position = position;
         _size = size;
         _initialColor = color;
         _currentColor = _initialColor;
         _speed = speed;
+        _movementArea = movementArea;
 
-        _rectangle = Geometry.NewRect(_position, _size);
+        _rectangle = Geometry.NewRect(position, _size);
     }
 
-    public void Update(Rectangle screenbounds)
+    public void Update(List<Entity> entities)
     {
-        _position = TranslateHorizontalAxis(screenbounds, _position, _size, _speed, true);
-        _rectangle = Geometry.NewRect(_position, _size);
-    }
+        // EntityPosition = TranslateBothAxis(screenbounds, EntityPosition, _size, _speed, true
 
-    
+        EntityPosition += Movement.Translate(Input.GetHorizontalAxis(true), 0, _speed);
+        EntityPosition = ScreenBounds.ClampToArea(_movementArea, this);
+
+        EntityCollider.Update(EntityPosition, entities);
+        _rectangle = Geometry.NewRect(EntityPosition, _size);
+    }
 
     public void Draw(SpriteBatch spriteBatch)
     {
-        spriteBatch.Draw(_pixel, _rectangle, _currentColor);
+        spriteBatch.Draw(Pixel, _rectangle, _currentColor);
+        EntityCollider.Draw(spriteBatch);
     }
 }

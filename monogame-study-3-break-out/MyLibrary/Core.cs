@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
+using MyLibrary.InputManager;
 
 namespace  MyLibrary;
 
@@ -48,7 +49,11 @@ public class Core : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape)){ Exit(); }
+        Input.Update(gameTime);
+        if (Input.Keyboard.IsKeyDown(Keys.Escape))
+        {
+            Exit();
+        }
         base.Update(gameTime);
     }
 

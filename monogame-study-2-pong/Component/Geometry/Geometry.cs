@@ -11,6 +11,7 @@ public class Geometry
         return new Rectangle(position.ToPoint(), size.ToPoint());
     }
 
+
     public static Vector2 GetClosestPointInRectangle(Vector2 position, Rectangle rectangle)
     {
         float closestX = Math.Clamp(position.X, rectangle.Left, rectangle.Right);

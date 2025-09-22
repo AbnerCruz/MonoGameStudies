@@ -1,102 +1,157 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
+using MyLibrary.Random;
 
-namespace MyLibrary;
+namespace MyLibrary.InputManager;
 
-public class InputManager
+public static class Input
 {
+    public static KeyboardInfo Keyboard = new KeyboardInfo();
+    private static float smoothTransition = 0.05f;
+    private static float horizontalAxis = 0f;
+    private static float verticalAxis = 0f;
+    private static Vector2 randomAxis = Vector2.Zero;
 
-    static float smoothTransition = 0.075f;
-    static float xAxis = 0;
-    static float yAxis = 0;
-    public static float HorizontalAxis(bool smooth = false)
+    public static void Update(GameTime gameTime)
     {
-        KeyboardState keyboard = Keyboard.GetState();
-        if (keyboard.IsKeyDown(Keys.Left))
-        {
-            if (smooth && xAxis > -1)
-            {
-                xAxis -= smoothTransition;
-            }
-            else
-            {
-                xAxis = -1;
-            }
-        }
-        else if (keyboard.IsKeyDown(Keys.Right))
-        {
-            if (smooth && xAxis < 1)
-            {
-                xAxis += smoothTransition;
-            }
-            else
-            {
-                xAxis = 1;
-            }
-        }
-        else
-        {
-            if (smooth)
-            {
-                if (xAxis > 0) xAxis = Math.Max(xAxis - smoothTransition, 0f);
-                else if (xAxis < 0) xAxis = Math.Min(xAxis + smoothTransition, 0f);
-            }
-            else
-            {
-                xAxis = 0;
-            }
-        }
-
-        // Better way to implement
-        // if (keyboard.IsKeyDown(Keys.Left))
-        //     xAxis = smooth ? Math.Max(xAxis - smoothTransition, -1f) : -1f;
-        // else if (keyboard.IsKeyDown(Keys.Right))
-        //     xAxis = smooth ? Math.Min(xAxis + smoothTransition, 1f) : 1f;
-        // else
-        //     xAxis = smooth ? MathF.Abs(xAxis) < smoothTransition ? 0f : xAxis - MathF.CopySign(smoothTransition, xAxis) : 0f;
-
-
-        return xAxis;
+        Keyboard.Update();
     }
 
-    public static float VerticalAxis(bool smooth = false)
+    public static float GetHorizontalAxis(bool smooth = false)
     {
-        KeyboardState keyboard = Keyboard.GetState();
-        if (keyboard.IsKeyDown(Keys.Up))
+        bool left = InputDirections.Left();
+        bool right = InputDirections.Right();
+        float x = 0f;
+
+        if (left && !right)
         {
-            if (smooth && yAxis > -1)
-            {
-                yAxis -= smoothTransition;
-            }
-            else
-            {
-                yAxis = -1;
-            }
+            x = -1;
         }
-        else if (keyboard.IsKeyDown(Keys.Down))
+        else if (right && !left)
         {
-            if (smooth && yAxis < 1)
-            {
-                yAxis += smoothTransition;
-            }
-            else
-            {
-                yAxis = 1;
-            }
+            x = 1;
         }
         else
         {
-            if (smooth)
+            x = 0;
+        }
+
+        horizontalAxis = smooth ? MathHelper.Lerp(horizontalAxis, x, smoothTransition) : x;
+        horizontalAxis = Math.Abs(horizontalAxis) < 0.01f ? 0f : horizontalAxis;
+
+        return horizontalAxis;
+    }
+
+    public static float GetVerticalAxis(bool smooth = false)
+    {
+        bool up = InputDirections.Up();
+        bool down = InputDirections.Down();
+        float y = 0f;
+
+        if (up && !down)
+        {
+            y = -1;
+        }
+        else if (down && !up)
+        {
+            y = 1;
+        }
+        else
+        {
+            y = 0;
+        }
+
+        verticalAxis = smooth ? MathHelper.Lerp(verticalAxis, y, smoothTransition) : y;
+        verticalAxis = Math.Abs(verticalAxis) < 0.01f ? 0f : verticalAxis;
+
+        return verticalAxis;
+    }
+
+    public static Vector2 RandomAxis(bool horizontal, bool vertical, bool smooth = false)
+    {
+        float x = 0f, y = 0f;
+
+        do
+        {
+            if (horizontal)
             {
-                if (yAxis > 0) yAxis = Math.Max(yAxis - smoothTransition, 0f);
-                else if (yAxis < 0) yAxis = Math.Min(yAxis + smoothTransition, 0f);
+                x = Rand.Int(-1, 1);
             }
-            else
+            if (vertical)
             {
-                yAxis = 0;
+                y = Rand.Int(-1, 1);
             }
         }
-        return yAxis;
+        while (x == 0f || y == 0f);
+        randomAxis.X = smooth ? MathHelper.Lerp(randomAxis.X, x, smoothTransition) : x;
+        randomAxis.X = Math.Abs(randomAxis.X) < 0.01f ? 0f : randomAxis.X;
+        randomAxis.Y = smooth ? MathHelper.Lerp(randomAxis.Y, y, smoothTransition) : y;
+        randomAxis.Y = Math.Abs(randomAxis.Y) < 0.01f ? 0f : randomAxis.Y;
+
+        return randomAxis;
+    }
+}
+
+
+public static class InputDirections
+{
+    private static KeyboardInfo Keyboard => Input.Keyboard;
+    public static bool Up()
+    {
+        return Keyboard.IsKeyDown(Keys.Up) || Keyboard.IsKeyDown(Keys.W); // || Gamepad inputs
+    }
+
+    public static bool Down()
+    {
+        return Keyboard.IsKeyDown(Keys.Down) || Keyboard.IsKeyDown(Keys.S); // || Gamepad inputs
+    }
+
+    public static bool Left()
+    {
+        return Keyboard.IsKeyDown(Keys.Left) || Keyboard.IsKeyDown(Keys.A);
+    }
+
+    public static bool Right()
+    {
+        return Keyboard.IsKeyDown(Keys.Right) || Keyboard.IsKeyDown(Keys.D);
+    }
+}
+
+public class KeyboardInfo
+{
+    public KeyboardState PreviousState { get; set; }
+    public KeyboardState CurrentState { get; set; }
+
+    public KeyboardInfo()
+    {
+        PreviousState = new KeyboardState();
+        CurrentState = Keyboard.GetState();
+    }
+
+    public void Update()
+    {
+        PreviousState = CurrentState;
+        CurrentState = Keyboard.GetState();
+    }
+
+    public bool IsKeyDown(Keys key)
+    {
+        return CurrentState.IsKeyDown(key);
+    }
+
+    public bool IsKeyUp(Keys key)
+    {
+        return CurrentState.IsKeyUp(key);
+    }
+
+    public bool JustPressed(Keys key)
+    {
+        return CurrentState.IsKeyDown(key) && PreviousState.IsKeyUp(key);
+    }
+
+    public bool JustReleased(Keys key)
+    {
+        return CurrentState.IsKeyUp(key) && PreviousState.IsKeyDown(key);
     }
 }
