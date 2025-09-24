@@ -18,9 +18,9 @@ public class CircleCollider : Collider
         Circle = Geometry.NewCircle(ColliderPosition, radius);
     }
 
-    public override void Update(Vector2 position, List<Entity> entities)
+    public override void Update(List<Entity> entities)
     {
-        ColliderPosition = position;
+        ColliderPosition = Owner.EntityPosition;
         Circle = Geometry.NewCircle(ColliderPosition, Radius);
         CollisionCaller(entities);
     }

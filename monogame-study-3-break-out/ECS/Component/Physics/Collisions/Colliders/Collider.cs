@@ -56,7 +56,7 @@ public abstract class Collider
         }
     }
 
-    public virtual void Update(Vector2 position, List<Entity> entities) { }
+    public virtual void Update(List<Entity> entities) { }
     public virtual void Draw(SpriteBatch spriteBatch){}
 }
 

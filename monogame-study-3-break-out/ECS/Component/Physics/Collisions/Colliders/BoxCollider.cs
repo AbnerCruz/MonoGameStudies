@@ -18,16 +18,16 @@ public class BoxCollider : Collider
         Rectangle = Geometry.NewRect(ColliderPosition, Size);
     }
 
-    public override void Update(Vector2 position, List<Entity> entities)
+    public override void Update(List<Entity> entities)
     {
-        ColliderPosition = position;
+        ColliderPosition = Owner.EntityPosition;
         Rectangle = Geometry.NewRect(ColliderPosition, Size);
         CollisionCaller(entities);
     }
 
     public void DrawCollisionBorder(SpriteBatch spriteBatch)
     {
-        int thickness = 2;
+        int thickness = 1;
 
         spriteBatch.Draw(Pixel, new Rectangle(Rectangle.X, Rectangle.Y, Rectangle.Width, thickness), CurrentColor);
         spriteBatch.Draw(Pixel, new Rectangle(Rectangle.X, Rectangle.Y + Rectangle.Height - thickness, Rectangle.Width, thickness), CurrentColor);

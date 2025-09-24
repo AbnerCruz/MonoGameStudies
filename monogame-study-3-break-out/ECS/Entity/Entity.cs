@@ -23,5 +23,6 @@ public class Entity
         EntityPosition = position;
         EntityCollider = entityCollider;
         Pixel = pixel;
+        EntityCollider.Owner = this;
     }
 }

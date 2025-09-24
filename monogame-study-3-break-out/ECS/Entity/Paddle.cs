@@ -14,6 +14,7 @@ public class Paddle : Entity
 {
     private Vector2 _size;
     private float _speed;
+    public Vector2 _velocity;
 
     private Rectangle _rectangle;
     private Color _currentColor;
@@ -23,6 +24,7 @@ public class Paddle : Entity
 
     public Paddle(Texture2D pixel, Vector2 position, Vector2 size, Color color, Collider collider, MovementArea movementArea, float speed = 0f) : base(pixel, position, collider)
     {
+        _velocity = Vector2.Zero;
         _size = size;
         _initialColor = color;
         _currentColor = _initialColor;
@@ -35,11 +37,11 @@ public class Paddle : Entity
     public void Update(List<Entity> entities)
     {
         // EntityPosition = TranslateBothAxis(screenbounds, EntityPosition, _size, _speed, true
-
-        EntityPosition += Movement.Translate(Input.GetHorizontalAxis(true), 0, _speed);
+        _velocity = Movement.Translate(Input.GetHorizontalAxis(true), 0, _speed);
+        EntityPosition += _velocity;
         EntityPosition = ScreenBounds.ClampToArea(_movementArea, this);
 
-        EntityCollider.Update(EntityPosition, entities);
+        EntityCollider.Update(entities);
         _rectangle = Geometry.NewRect(EntityPosition, _size);
     }
 

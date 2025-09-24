@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Physics2D.Collisions.Colliders;
 using System;
+using GameObjects.Entity;
 
 namespace Physics2D.Collisions;
 
@@ -33,8 +34,9 @@ public abstract class CollisionSystem
 
         bool Collided = BoxCollision.CheckHelper(collider, other);
         Vector2 Normal = BoxCollision.NormalHelper(collider.Rectangle, other.Rectangle);
+        Entity Entity = other.Owner;
 
-        CollisionResult result = new CollisionResult(Collided, Normal);
+        CollisionResult result = new CollisionResult(Collided, Normal, Entity);
 
         return result;
     }
@@ -54,13 +56,14 @@ public struct CollisionResult
 {
     public bool Collided;
     public Vector2 Normal;
-    public float Depth;
+    public Entity Entity;
 
-    public CollisionResult(bool collided, Vector2 normal)
+    public CollisionResult(bool collided, Vector2 normal, Entity entity)
     {
         Collided = collided;
         Normal = normal;
+        Entity = entity;
     }
 
-    public static readonly CollisionResult None = new(false, Vector2.Zero);
+    public static readonly CollisionResult None = new(false, Vector2.Zero, null);
 }

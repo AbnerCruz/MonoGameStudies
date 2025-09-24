@@ -41,9 +41,11 @@ public class Ball : Entity
         EntityPosition += _targetDirection;
         EntityPosition = ScreenBounds.ClampToArea(_movementArea, this);
         _rectangle = Geometry.NewRect(EntityPosition, _size);
-        EntityCollider.Update(EntityPosition, entities);
+        EntityCollider.Update(entities);
         BoundsBounceManager();
         CollisionBounceManager();
+        _targetDirection.Normalize();
+        _targetDirection *= _speed;
     }
 
     private void BoundsBounceManager()
@@ -84,6 +86,11 @@ public class Ball : Entity
             if (result.Collided)
             {
                 vectorialSum += result.Normal;
+                _speed += 0.25f;
+                if (_speed >= 14f)
+                {
+                    _speed = 14f;
+                }
             }
         }
         normal += vectorialSum;
@@ -94,6 +101,15 @@ public class Ball : Entity
         if (Vector2.Dot(_targetDirection, normal) < 0)
         {
             _targetDirection = Vector2.Reflect(_targetDirection, normal);
+            foreach (CollisionResult result in EntityCollisionResults)
+            {
+                if (result.Entity is Paddle player)
+                {
+                    _targetDirection.X += player._velocity.X;
+                    _targetDirection.Y *= 2f;
+                    break;
+                }
+            }
         }
     }
 
@@ -101,6 +117,7 @@ public class Ball : Entity
     {
         EntityPosition = _initialPosiion;
         _targetDirection = Movement.Translate(Geometry.NewAngle(_angle.X, _angle.Y), _speed);
+        _speed = 7f;
     }
 
     public void Draw(SpriteBatch spriteBatch)
