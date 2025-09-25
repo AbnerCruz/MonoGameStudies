@@ -14,14 +14,16 @@ public class Brick : Entity
     private Rectangle _rectangle;
     private Color _initialColor;
     private Color _currentColor;
-    public int _life;
+    public int _initialLife;
+    public int _currentLife;
     public Vector2 _arrayPos;
 
     public Brick(Texture2D pixel, Vector2 position, Vector2 size, Collider collider, int life, Vector2 arrayPos) : base(pixel, position, collider)
     {
         _size = size;
         _rectangle = Geometry.NewRect(position, size);
-        _life = life;
+        _initialLife = life;
+        _currentLife = life;
         _arrayPos = arrayPos;
         _initialColor = InitialColormanager();
         _currentColor = _initialColor;
@@ -35,19 +37,19 @@ public class Brick : Entity
 
     public Color InitialColormanager()
     {
-        if (_life == 1)
+        if (_currentLife == 1)
         {
             return Color.CornflowerBlue;
         }
-        else if (_life == 2)
+        else if (_currentLife == 2)
         {
             return Color.Yellow;
         }
-        else if (_life == 3)
+        else if (_currentLife == 3)
         {
             return Color.Purple;
         }
-        else if (_life == 4)
+        else if (_currentLife == 4)
         {
             return Color.Red;
         }
@@ -61,7 +63,7 @@ public class Brick : Entity
         {
             if (result.Entity is Ball ball)
             {
-                _life -= 1;
+                _currentLife -= 1;
             }
         }
     }

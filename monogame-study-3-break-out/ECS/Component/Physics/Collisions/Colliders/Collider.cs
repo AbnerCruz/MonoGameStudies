@@ -25,7 +25,7 @@ public abstract class Collider
         ColliderPosition = position;
         Owner = new Entity();
         Pixel = pixel;
-        Color = Color.Green;
+        Color = Color.Black;
         CurrentColor = Color;
     }
 

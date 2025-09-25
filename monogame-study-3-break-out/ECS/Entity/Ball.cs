@@ -19,13 +19,12 @@ public class Ball : Entity
     private Vector2 _size;
     private Vector2 _initialPosiion;
     private Vector2 _targetDirection;
-    private float _speed = 7f;
+    public float _speed = 7f;
     private MovementArea _movementArea;
-    private int _playerLife;
     private Vector2 _angle = new Vector2(Rand.Int(20,60), Rand.Int(120, 160));
 
 
-    public Ball(Texture2D pixel, Vector2 position, Vector2 size, Collider collider, MovementArea movementArea, ref int playerLife) : base(pixel, position, collider)
+    public Ball(Texture2D pixel, Vector2 position, Vector2 size, Collider collider, MovementArea movementArea) : base(pixel, position, collider)
     {
         _initialPosiion = position;
         _size = size;
@@ -33,7 +32,6 @@ public class Ball : Entity
 
         _targetDirection = Movement.Translate(Geometry.NewAngle(_angle.X, _angle.Y), _speed);
         _movementArea = movementArea;
-        _playerLife = playerLife;
     }
 
     public void Update(List<Entity> entities)
@@ -59,7 +57,8 @@ public class Ball : Entity
                 {
                     if (_rectangle.Bottom >= area.Area.Bottom)
                     {
-                        _playerLife -= 1;
+                        monogame_study_3_break_out.BreakOut.failSound.Play();
+                        monogame_study_3_break_out.BreakOut.UpdatePlayerLife();
                         ResetPos();
                         return;
                     }
@@ -71,6 +70,7 @@ public class Ball : Entity
                     if (Vector2.Dot(_targetDirection, normal) < 0)
                     {
                         _targetDirection = Vector2.Reflect(_targetDirection, normal);
+                        _targetDirection.Y *= 2f;
                     }
                 }
             }
@@ -86,11 +86,12 @@ public class Ball : Entity
             if (result.Collided)
             {
                 vectorialSum += result.Normal;
-                _speed += 0.25f;
+                _speed += 0.1f;
                 if (_speed >= 14f)
                 {
                     _speed = 14f;
                 }
+                monogame_study_3_break_out.BreakOut.hitSound.Play();
             }
         }
         normal += vectorialSum;
@@ -109,6 +110,13 @@ public class Ball : Entity
                     _targetDirection.Y *= 2f;
                     break;
                 }
+                else if (result.Entity is Brick brick)
+                {
+                    if (brick._currentLife - 1 <= 0)
+                    {
+                        monogame_study_3_break_out.BreakOut.PlayerScore(brick._initialLife);
+                    }
+                }
             }
         }
     }
@@ -117,7 +125,6 @@ public class Ball : Entity
     {
         EntityPosition = _initialPosiion;
         _targetDirection = Movement.Translate(Geometry.NewAngle(_angle.X, _angle.Y), _speed);
-        _speed = 7f;
     }
 
     public void Draw(SpriteBatch spriteBatch)

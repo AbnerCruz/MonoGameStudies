@@ -8,6 +8,9 @@ using GameObjects;
 using Physics2D.Collisions.Colliders;
 using System.Collections.Generic;
 using Physics2D.Movement.Area;
+using Microsoft.Xna.Framework.Media;
+using Microsoft.Xna.Framework.Audio;
+using MyLibrary.InputManager;
 
 
 namespace monogame_study_3_break_out;
@@ -17,12 +20,26 @@ public class BreakOut : Core
     private static int windowWidth = 800;
     private static int windowHeight = 650;
     private Rectangle screenBounds;
-    private List<Entity> entities;
-    public int playerLife = 3;
-    public Brick[,] Bricks;
-    Vector2 _brickSize => new Vector2(windowWidth/10, 20);
-    int levels = 6;
-    int quantity => (int)(windowWidth / (int)_brickSize.X);
+    private static List<Entity> entities;
+    public static int playerLife = 3;
+    public static Brick[,] Bricks;
+    static Vector2 _brickSize => new Vector2(windowWidth / 10, 20);
+    static int levels = 6;
+    static int quantity => (int)(windowWidth / (int)_brickSize.X);
+    private static SpriteFont font;
+    private static SpriteFont font2;
+    public static int points;
+    public static int record;
+    public static Texture2D _pixel;
+    static List<Entity> toRemove = new List<Entity>();
+
+    public static GameState gameState = GameState.paused;
+
+    Song backgroundMusic;
+    public static SoundEffect hitSound;
+    public static SoundEffect failSound;
+    SoundEffect breakSound;
+    static SoundEffect gameOverMusic;
 
     public BreakOut() : base("BreakOut", windowWidth, windowHeight, false)
     {
@@ -39,7 +56,7 @@ public class BreakOut : Core
 
     protected override void LoadContent()
     {
-        Texture2D _pixel = new Texture2D(GraphicsDevice, 1, 1);
+        _pixel = new Texture2D(GraphicsDevice, 1, 1);
         _pixel.SetData(new[] { Color.White });
 
         Vector2 _playerSize = new Vector2(100, 20);
@@ -48,9 +65,21 @@ public class BreakOut : Core
 
         Vector2 _boxSize = new Vector2(15, 15);
         Vector2 _boxPosition = new Vector2((windowWidth - _boxSize.X) * 0.5f, (windowHeight - _boxSize.Y) * 0.5f);
-        Entity ball = new Ball(_pixel, _boxPosition, _boxSize, new BoxCollider(_pixel, _boxPosition, _boxSize), new RectangleArea(screenBounds), ref playerLife);
+        Entity ball = new Ball(_pixel, _boxPosition, _boxSize, new BoxCollider(_pixel, _boxPosition, _boxSize), new RectangleArea(screenBounds));
 
         GenerateBricks(_pixel, levels, quantity);
+
+        backgroundMusic = Content.Load<Song>("sounds/backgroundsound");
+        gameOverMusic = Content.Load<SoundEffect>("sounds/gameOver");
+        MediaPlayer.IsRepeating = true;
+        MediaPlayer.Volume = 0.5f;
+
+        hitSound = Content.Load<SoundEffect>("sounds/hitsound");
+        failSound = Content.Load<SoundEffect>("sounds/failsound");
+        breakSound = Content.Load<SoundEffect>("sounds/breaksound");
+
+        font = Content.Load<SpriteFont>("fonts/File");
+        font2 = Content.Load<SpriteFont>("fonts/font2");
 
         entities.Add(player);
         entities.Add(ball);
@@ -59,38 +88,68 @@ public class BreakOut : Core
 
     protected override void Update(GameTime gameTime)
     {
-        List<Entity> toRemove = new List<Entity>();
-        List<Entity> entitiesWithCollider = new List<Entity>();
-        foreach (Entity entity in entities)
+        if (gameState == GameState.paused)
         {
-            if (entity.EntityCollider != null)
+            if (Input.Keyboard.JustPressed(Keys.Enter))
             {
-                entitiesWithCollider.Add(entity);
+                gameState = GameState.playing;
+                MediaPlayer.Play(backgroundMusic);
             }
         }
-        foreach (Entity entity in entities)
+        else if (gameState == GameState.playing)
         {
-            if (entity is Paddle player)
+            if (Input.Keyboard.JustPressed(Keys.P))
             {
-                player.Update(entitiesWithCollider);
+                MediaPlayer.Pause();
+                gameState = GameState.paused;
             }
-            else if (entity is Ball ball)
+            List<Entity> entitiesWithCollider = new List<Entity>();
+            foreach (Entity entity in entities)
             {
-                ball.Update(entitiesWithCollider);
-            }
-            else if (entity is Brick brick)
-            {
-                brick.Update(entitiesWithCollider);
-                if (brick._life <= 0)
+                if (entity.EntityCollider != null)
                 {
-                    toRemove.Add(entity); 
+                    entitiesWithCollider.Add(entity);
                 }
             }
+            foreach (Entity entity in entities)
+            {
+                if (entity is Paddle player)
+                {
+                    player.Update(entitiesWithCollider);
+                }
+                else if (entity is Ball ball)
+                {
+                    ball.Update(entitiesWithCollider);
+                }
+                else if (entity is Brick brick)
+                {
+                    brick.Update(entitiesWithCollider);
+                    if (brick._currentLife <= 0)
+                    {
+                        toRemove.Add(entity);
+                    }
+                }
+            }
+            foreach (Entity remove in toRemove)
+            {
+                Brick brick = (Brick)remove;
+                RemoveBrick(remove, brick);
+                breakSound.Play();
+            }
         }
-        foreach (Entity remove in toRemove)
+        int brickCount = 0;
+        foreach (Entity entity in entities)
         {
-            RemoveBrick(remove, (Brick)remove);
+            if (entity is Brick brick)
+            {
+                brickCount++;
+            }
         }
+        if (brickCount <= 0)
+        {
+            GenerateBricks(_pixel, levels, quantity);
+        }
+        toRemove.Clear();
         base.Update(gameTime);
     }
 
@@ -98,6 +157,12 @@ public class BreakOut : Core
     {
         GraphicsDevice.Clear(Color.Black);
         SpriteBatch.Begin();
+        string text = points.ToString();
+        Vector2 textSize = font.MeasureString(text);
+        Vector2 scorePosition = new Vector2((windowWidth - textSize.X) * 0.5f, (windowHeight - textSize.Y) * 0.5f);
+        SpriteBatch.DrawString(font, points.ToString(), scorePosition, Color.Green);
+        SpriteBatch.DrawString(font2, "HP:" + playerLife.ToString(), new Vector2(0, 0), Color.Red);
+        SpriteBatch.DrawString(font2, "Best Score:" + record.ToString(), new Vector2(0, windowHeight - 50), Color.White);
         foreach (Entity entity in entities)
         {
             if (entity is Paddle player)
@@ -118,7 +183,7 @@ public class BreakOut : Core
         base.Draw(gameTime);
     }
 
-    public void GenerateBricks(Texture2D pixel, int levels, int quantity)
+    public static void GenerateBricks(Texture2D pixel, int levels, int quantity)
     {
         for (int x = 0; x < levels; x++)
         {
@@ -126,7 +191,7 @@ public class BreakOut : Core
             {
                 int k = (int)(levels / 3);
 
-                int life = (int)((levels - 1 - x) / k)+1;
+                int life = (int)((levels - 1 - x) / k) + 1;
                 Vector2 position = new Vector2(y * _brickSize.X, x * _brickSize.Y + 30);
                 Bricks[x, y] = new Brick(pixel, position, _brickSize, new BoxCollider(pixel, position, _brickSize), life, new Vector2(x, y));
                 entities.Add(Bricks[x, y]);
@@ -134,9 +199,56 @@ public class BreakOut : Core
         }
     }
 
-    public void RemoveBrick(Entity entity, Brick target)
+    public static void RemoveBrick(Entity entity, Brick target)
     {
-        entities.Remove(entity);
+        if (entities.Contains(entity))
+        {
+            entities.Remove(entity);
+        }
         Bricks[(int)target._arrayPos.X, (int)target._arrayPos.Y] = null;
+    }
+
+    public static void UpdatePlayerLife()
+    {
+        playerLife -= 1;
+        if (playerLife <= 0)
+        {
+            ResetGame();
+        }
+    }
+
+    public static void ResetGame()
+    {
+        if (points > record)
+        {
+            record = points;
+        }
+        points = 0;
+        playerLife = 3;
+        List<Entity> toRemove = new List<Entity>();
+        foreach (Entity entity in entities)
+        {
+            if (entity is Ball ball)
+            {
+                ball.ResetPos();
+                ball._speed = 7f;
+            }
+            else if (entity is Paddle player)
+            {
+                player.ResetPos();
+            }
+            else if (entity is Brick brick)
+            {
+                brick._currentLife = -1;
+            }
+        }
+        MediaPlayer.Pause();
+        gameOverMusic.Play();
+        gameState = GameState.paused;
+    }
+
+    public static void PlayerScore(int value)
+    {
+        points += value;
     }
 }

@@ -15,6 +15,7 @@ public class Paddle : Entity
     private Vector2 _size;
     private float _speed;
     public Vector2 _velocity;
+    private Vector2 _initialPos;
 
     private Rectangle _rectangle;
     private Color _currentColor;
@@ -30,6 +31,7 @@ public class Paddle : Entity
         _currentColor = _initialColor;
         _speed = speed;
         _movementArea = movementArea;
+        _initialPos = position;
 
         _rectangle = Geometry.NewRect(position, _size);
     }
@@ -49,5 +51,10 @@ public class Paddle : Entity
     {
         spriteBatch.Draw(Pixel, _rectangle, _currentColor);
         EntityCollider.Draw(spriteBatch);
+    }
+
+    public void ResetPos()
+    {
+        EntityPosition = _initialPos;
     }
 }
