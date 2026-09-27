@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d121c"><meta name="description" content="IDE 2D em JavaScript com arquivos, sprites e exportação HTML.">
+<title>MobileForge</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230d121c'/%3E%3Cpath d='M16 20h32v24H16z' fill='none' stroke='%235ce0b4' stroke-width='4'/%3E%3Cpath d='m27 27 6 5-6 5m11-10v10' fill='none' stroke='%235ce0b4' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./styles.css"><script src="./runtime.js" defer></script><script src="./app.js" defer></script>
+</head><body><div class="shell">
+<header class="topbar">
+  <button id="filesToggle" class="icon-button mobile-only" aria-label="Abrir arquivos">☰</button>
+  <div class="brand"><span class="brand-icon">▣</span><span>MobileForge</span><small>IDE 2D</small></div>
+  <input id="projectName" class="project-name" aria-label="Nome do projeto" maxlength="50" value="Meu jogo">
+  <div class="header-actions"><button id="playButton" class="button run">▶ <span>Jogar</span></button><button id="exportButton" class="button export">↓ <span>Exportar HTML</span></button></div>
+</header>
+<main class="ide">
+  <aside id="explorer" class="explorer" aria-label="Explorador do projeto">
+    <div class="aside-title">PROJETO <button id="closeFiles" class="icon-button mobile-only" aria-label="Fechar arquivos">×</button></div>
+    <div class="group-head"><span>ARQUIVOS JS</span><button id="newFile" class="mini-button" aria-label="Novo arquivo">＋</button></div>
+    <div id="filesList" class="tree"></div>
+    <div class="group-head"><span>SPRITES</span><button id="newSprite" class="mini-button" aria-label="Novo sprite">＋</button></div>
+    <div id="spritesList" class="tree"></div>
+    <div class="aside-bottom"><button id="openTutorial" class="aside-action">? Tutorial</button><button id="importAsset" class="aside-action">＋ Importar PNG</button><button id="importProject" class="aside-action">↥ Abrir projeto</button><button id="saveProject" class="aside-action">↧ Backup do projeto</button></div>
+  </aside>
+  <section id="workPanel" class="work-panel" aria-label="Área de edição">
+    <div id="tabs" class="file-tabs" role="tablist" aria-label="Arquivos abertos"></div>
+    <div id="codeView" class="code-view"><div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Código do arquivo"></textarea></div>
+    <div id="spriteView" class="sprite-view" hidden>
+      <div class="sprite-top"><strong id="spriteTitle">Sprite</strong><span id="spriteSize">16 × 16</span></div>
+      <div class="sprite-stage"><canvas id="spriteCanvas" width="512" height="512" aria-label="Editor de pixels"></canvas></div>
+      <div class="sprite-tools"><label>Cor <input id="pixelColor" type="color" value="#5ce0b4"></label><button id="brushTool" class="tool active">Lápis</button><button id="eraserTool" class="tool">Borracha</button><button id="undoSprite" class="tool">Desfazer</button><button id="clearSprite" class="tool">Limpar</button><button id="downloadSprite" class="tool">PNG</button></div>
+    </div>
+    <div class="work-foot"><span id="saveStatus">Salvo neste aparelho</span><span id="cursorStatus">JavaScript · 360 × 640</span></div>
+  </section>
+  <section id="previewPanel" class="preview-panel" aria-label="Jogo e console"><div class="preview-head"><strong>JOGO</strong><button id="restartButton" class="subtle-button">↻ Reiniciar</button></div><div class="preview-stage"><iframe id="preview" title="Prévia do jogo" sandbox="allow-scripts"></iframe></div><div class="console-head">CONSOLE <button id="clearConsole" class="subtle-button">Limpar</button></div><div id="console" class="console" role="status" aria-live="polite">Pronto para jogar.</div></section>
+  <section id="tutorialPanel" class="tutorial-panel" hidden aria-label="Tutorial"><div class="tutorial-inner">
+    <div class="eyebrow">GUIA · MOBILEFORGE</div><button id="backToEditor" class="subtle-button">← Voltar ao editor</button><h1>Crie um jogo em etapas</h1>
+    <p>MobileForge é um framework 2D guiado por código. Você controla o estado e desenha cada quadro, como no MonoGame. O editor reúne arquivos, sprites e prévia no mesmo lugar.</p>
+    <nav class="tutorial-index" aria-label="Tópicos"><a href="#t-project">Projeto</a><a href="#t-loop">Ciclo</a><a href="#t-draw">Desenho</a><a href="#t-input">Entrada</a><a href="#t-sprites">Sprites</a><a href="#t-export">Exportação</a></nav>
+    <section id="t-project"><h2>1. Projeto e arquivos</h2><p>Crie arquivos <code>.js</code> em Arquivos JS. Eles executam na ordem da lista. Deixe <code>setup</code>, <code>update</code> e <code>draw</code> em <code>main.js</code>, que fica por último. Classes e funções dos arquivos anteriores podem ser usadas nele.</p><p>O projeto é salvo no navegador. Faça um backup <code>.json</code> para conservar código e sprites em outro aparelho.</p></section>
+    <section id="t-loop"><h2>2. Ciclo do jogo</h2><pre><code>function setup(game) {
+  // Uma vez ao iniciar.
+}
+function update(game, dt) {
+  // A cada quadro; dt é o tempo em segundos.
+}
+function draw(game) {
+  game.clear('#101827');
+  // Desenhe o quadro inteiro.
+}</code></pre><p>A tela lógica mede 360 × 640 pixels e se adapta ao tamanho físico mantendo a proporção.</p></section>
+    <section id="t-draw"><h2>3. Desenho</h2><pre><code>game.clear('#101827');
+game.rect(20, 30, 80, 40, '#5ce0b4');
+game.circle(180, 120, 24, '#ffcc66');
+game.text('Pontos: 10', 16, 36, 20, '#fff');</code></pre><p>O desenho é imediato: você decide a aparência de cada quadro.</p></section>
+    <section id="t-input"><h2>4. Toque e teclado</h2><pre><code>if (game.pointer.down) {
+  player.x = game.pointer.x;
+  player.y = game.pointer.y;
+}
+if (game.key('ArrowRight')) player.x += 180 * dt;</code></pre><p><code>game.pointer</code> contém <code>x</code>, <code>y</code> e <code>down</code>.</p></section>
+    <section id="t-sprites"><h2>5. Sprites</h2><p>Crie um sprite, desenhe seus pixels ou importe um PNG. Esta versão aceita sprites de até 64 × 64 pixels e preserva a transparência.</p><pre><code>game.sprite('hero', player.x, player.y, 3);</code></pre><p>O último número é a escala. O nome deve ser igual ao exibido no explorador.</p></section>
+    <section id="t-export"><h2>6. Teste e exporte</h2><p>Jogar reinicia a prévia. Erros aparecem no console. Exportar HTML baixa um único arquivo com o motor, o código e os sprites; basta abri-lo em um navegador.</p><p>Com teclado físico: <code>Ctrl + Enter</code> para jogar e <code>Ctrl + S</code> para salvar.</p></section>
+    <section><h2>Próximos módulos</h2><p>UI desenhada no canvas e física 2D básica serão módulos opcionais. O código do jogo continuará no controle da atualização e do desenho.</p></section>
+  </div></section>
+</main>
+<nav class="mobile-nav" aria-label="Seções"><button id="navCode" class="active">Código</button><button id="navSprites">Sprites</button><button id="navPlay">Jogo</button><button id="navGuide">Tutorial</button></nav>
+<input id="assetInput" type="file" accept="image/png" hidden><input id="projectInput" type="file" accept=".json,application/json" hidden>
+<div id="dialogOverlay" class="dialog-overlay" hidden><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle"><h2 id="dialogTitle"></h2><label id="dialogLabel" for="dialogInput"></label><input id="dialogInput"><div class="dialog-actions"><button id="dialogCancel" class="button">Cancelar</button><button id="dialogConfirm" class="button run">Confirmar</button></div></div></div>
+</div></body></html>
