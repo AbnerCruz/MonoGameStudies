@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PublishTrimmed>false</PublishTrimmed>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmBuildNative>false</WasmBuildNative>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <WasmEnableWebcil>false</WasmEnableWebcil>
+    <DefineConstants Condition="'$(ForgePlayer)' != 'true'">$(DefineConstants);FORGE_EDITOR</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ForgePlayer)' != 'true'">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net90" Version="1.8.3" />
+    <EmbeddedResource Include="Engine.txt" />
+  </ItemGroup>
+</Project>

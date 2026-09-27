@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content"><meta name="theme-color" content="#10151f"><title>MobileForge • C#</title><link rel="stylesheet" href="app.css"></head>
+<body>
+<section id="home" class="home">
+  <header class="brand"><span class="brand-icon">M<span>F</span></span><div><strong>MobileForge</strong><small>C# LAB · 0.3.0</small></div></header>
+  <div class="intro"><span class="eyebrow">SEU PRÓXIMO JOGO COMEÇA AQUI</span><h1>Pequenas ideias.<br>Jogos de verdade.</h1><p>Escreva C# no celular. Crie, execute e leve seu jogo com você.</p></div>
+  <div class="home-actions"><button id="newProject" class="primary">＋ Novo projeto</button><button id="openExample">Abrir exemplo com Player</button><button id="importProject">Importar projeto</button></div>
+  <div class="section-title"><h2>Seus projetos</h2><span>Salvos neste navegador</span></div><div id="projects" class="projects"></div>
+  <p class="home-foot">Prova de C# real • O primeiro teste baixa o compilador .NET.<br><a href="../">Abrir editor JavaScript</a></p>
+</section>
+<section id="workspace" hidden>
+  <header class="topbar"><button id="homeButton" class="icon" aria-label="Voltar aos projetos">‹</button><div class="project-heading"><strong id="projectName"></strong><small id="saveStatus">Salvo neste navegador</small></div><button id="run" class="primary" aria-label="Compilar e executar">▶ Executar</button><button id="stop" class="icon" aria-label="Parar jogo" disabled>■</button></header>
+  <nav class="tabs" id="tabs" aria-label="Arquivos"></nav>
+  <div class="filebar"><button id="addFile">＋ Arquivo</button><button id="renameFile">Renomear</button><button id="deleteFile">Excluir</button><button id="backup">Backup</button></div>
+  <main id="codeView" class="view"><div id="editor"></div><div class="typing-tools" aria-label="Atalhos de edição"><button data-insert="tab">⇥</button><button data-insert="undo">↶</button><button data-insert="redo">↷</button><button data-insert="{">{</button><button data-insert="}">}</button><button data-insert="(">(</button><button data-insert=")">)</button><button data-insert=";">;</button><button data-insert="=">=</button><button data-insert="&quot;">&quot;</button></div></main>
+  <main id="gameView" class="view game-view" hidden><div class="game-toolbar"><span id="runtimeStatus" role="status">Pronto para compilar</span><button id="exportGame" disabled>↓ HTML offline</button></div><div class="stage"><canvas id="canvas" width="360" height="640" tabindex="0" aria-label="Prévia do jogo"></canvas></div><p class="game-note">Toque na tela do exemplo para mover. O código roda no seu dispositivo.</p></main>
+  <main id="errorsView" class="view text-view" hidden><h2>Compilação</h2><div id="diagnostics" role="status">Os erros aparecerão aqui, com arquivo e linha.</div></main>
+  <main id="guideView" class="view text-view" hidden><span class="eyebrow">COMECE PELO MAIN</span><h2>Você controla o jogo.</h2><p>O projeto começa em <code>MainGame : Game</code>. Essa classe cria seus objetos e decide quando atualizar e desenhar cada um.</p><h3>1. O ciclo</h3><p><code>Start()</code> executa uma vez. <code>Update(float dt)</code> atualiza a lógica: dt é o tempo em segundos desde o quadro anterior. <code>Draw()</code> desenha na tela.</p><h3>2. Classes e arquivos</h3><p>Crie <code>Player.cs</code> para definir a classe. Em MainGame, declare <code>public Player Player = new Player();</code>. Depois chame <code>Player.Update(dt)</code> e <code>Player.Draw()</code> nos métodos correspondentes.</p><p>Os arquivos compilam juntos como um projeto C#. A ordem das abas não importa. Use <code>using MobileForge;</code> para acessar a engine.</p><h3>3. Desenho e entrada</h3><pre>Graphics.Clear("#101827");
+Graphics.Rect(10, 20, 48, 48, "#80e6b9");
+Graphics.Sprite("hero", 10, 20, 3);
+Graphics.Text("Olá!", 16, 40);
+
+if (Input.Down) X = Input.X;
+if (Input.Key("ArrowRight")) X += 180 * dt;</pre><p>A tela lógica tem 360 × 640 pixels. <code>Input.X</code>, <code>Input.Y</code> e <code>Input.Down</code> representam o toque. O exemplo inclui o sprite <code>hero</code>.</p><h3>4. Testar e corrigir</h3><p>Toque em Executar. O compilador Roslyn verifica todos os arquivos. Toque em um erro para ir à linha. A barra acima do teclado ajuda a inserir símbolos; as sugestões incluem palavras de C# e a API da engine.</p><h3>5. Levar o jogo</h3><p>Após compilar, use HTML offline. O arquivo inclui o runtime, o jogo compilado e os sprites. A exportação baixa o runtime na primeira vez e pode gerar um arquivo grande. Backup salva o projeto editável em JSON.</p><h3>Limites desta prova</h3><p>Esta é uma API própria, inspirada no MonoGame. Ainda não há física, áudio, NuGet, editor de sprites C# ou autocomplete semântico. As bibliotecas disponíveis são as incluídas no runtime; não é um ambiente .NET desktop completo.</p></main>
+  <nav class="bottom-nav" aria-label="Áreas do projeto"><button data-view="code" class="selected">⌘<span>Código</span></button><button data-view="game">▷<span>Jogo</span></button><button data-view="errors">!<span id="errorLabel">Erros</span></button><button data-view="guide">?<span>Guia</span></button></nav>
+</section>
+<dialog id="nameDialog"><form method="dialog"><h2 id="dialogTitle"></h2><input id="dialogInput" autocomplete="off" required maxlength="80"><div class="dialog-actions"><button value="cancel" formnovalidate>Cancelar</button><button value="ok" class="primary">Salvar</button></div></form></dialog>
+<input id="importInput" type="file" accept="application/json,.json" hidden><div id="toast" role="status" hidden></div>
+<script type="module" src="app.js"></script></body></html>

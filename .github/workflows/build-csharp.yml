@@ -1,0 +1,59 @@
+name: Build and test MobileForge C# Lab
+on:
+  push:
+    branches: [gh-pages]
+    paths:
+      - 'csharp-src/**'
+      - '.github/workflows/build-csharp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: "pages-csharp"
+  cancel-in-progress: true
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install WebAssembly workload
+        run: dotnet workload install wasm-tools
+      - name: Bundle editor and install Chromium
+        working-directory: csharp-src
+        run: |
+          npm install --no-audit --no-fund
+          npm run bundle
+          npx playwright install --with-deps chromium
+      - name: Publish editor and player runtimes
+        working-directory: csharp-src
+        run: |
+          dotnet publish ForgeRuntime.csproj -c Release -o out/editor
+          dotnet publish ForgeRuntime.csproj -c Release -o out/player -p:ForgePlayer=true
+          cp -R out/editor/wwwroot/_framework wwwroot/_framework
+          python scripts/pack.py out/player/wwwroot wwwroot/player-framework.pack.gz
+      - name: Compile, play and open exported HTML offline
+        working-directory: csharp-src
+        run: node scripts/smoke.mjs
+      - name: Assemble site
+        run: |
+          mkdir -p site/csharp
+          cp index.html app.js styles.css runtime.js README.md PLANO.md .nojekyll site/
+          cp csharp-src/wwwroot/{index.html,app.css,app.js,player.js,worker.js,editor.bundle.js,player-framework.pack.gz} site/csharp/
+          cp -R csharp-src/wwwroot/_framework site/csharp/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
+        id: deployment
