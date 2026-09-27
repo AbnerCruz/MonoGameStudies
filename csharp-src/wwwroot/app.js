@@ -82,6 +82,8 @@ public class Player
 const hero=['........','.111111.','12222221','12322321','12333321','12344321','.155551.','..1..1..'].join('').split('').map(n=>({'1':'#344e70','2':'#80e6b9','3':'#f7d28c','4':'#2c314a','5':'#4b7fe3'}[n]||null));
 function newProject(name,example=false){return {id:crypto.randomUUID(),name,updatedAt:Date.now(),active:'MainGame.cs',files:example?[{name:'MainGame.cs',code:demoMain},{name:'Player.cs',code:demoPlayer}]:[{name:'MainGame.cs',code:emptyCode}],sprites:example?[{name:'hero',w:8,h:8,pixels:hero}]:[]};}
 let project=null, active='', view='code', editor, player, booted=false, lastBuild=null, saving=null, generation=0;
+let activeSprite='', spriteTool='pencil';
+const palette=['#101827','#ffffff','#80e6b9','#76d4dc','#ffcc92','#ff8d9c','#c5a3ff','#4b7fe3','#344e70','#f7d28c'];
 function notice(message){const t=$('toast');t.textContent=message;t.hidden=false;clearTimeout(notice.timer);notice.timer=setTimeout(()=>t.hidden=true,4800);}
 async function ask(title,value=''){
   $('dialogTitle').textContent=title;$('dialogInput').value=value;
@@ -95,10 +97,33 @@ function save(){if(!project)return;$('saveStatus').textContent='Salvando…';cle
 function invalidate(){generation++;lastBuild=null;$('exportGame').disabled=true;$('runtimeStatus').textContent='Alterações pendentes · Execute novamente';}
 function renderTabs(){$('tabs').replaceChildren();for(const file of project.files){const button=document.createElement('button');button.textContent=file.name;button.classList.toggle('selected',file.name===active);button.onclick=()=>selectFile(file.name);$('tabs').append(button);}}
 function selectFile(name){active=name;project.active=name;const file=project.files.find(f=>f.name===name);if(!file)return;editor.set(file.code);editor.diagnostics(file.diagnostics||[]);renderTabs();save();}
-function showView(name){view=name;for(const section of ['code','game','errors','guide'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));}
-async function openProject(p){project=p;active=p.files.find(f=>f.name===p.active)?.name||p.files[0].name;$('home').hidden=true;$('workspace').hidden=false;$('projectName').textContent=p.name;$('saveStatus').textContent='Salvo neste navegador';$('diagnostics').textContent='Os erros aparecerão aqui, com arquivo e linha.';$('errorLabel').textContent='Erros';$('runtimeStatus').textContent='Pronto para compilar';$('exportGame').disabled=true;
+function showView(name){view=name;for(const section of ['code','sprites','game','errors','guide'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));}
+function currentSprite(){return project?.sprites.find(s=>s.name===activeSprite);}
+function renderSpriteList(){
+  $('spriteList').replaceChildren();
+  for(const sprite of project.sprites){const button=document.createElement('button');button.textContent=sprite.name;button.classList.toggle('selected',sprite.name===activeSprite);button.onclick=()=>selectSprite(sprite.name);$('spriteList').append(button);}
+  const sprite=currentSprite();$('spriteEmpty').hidden=!!sprite;$('spriteWorkspace').hidden=!sprite;
+  if(sprite){$('spriteName').textContent=sprite.name;$('spriteDimensions').textContent=`${sprite.w} × ${sprite.h} pixels`;
+    const canvas=$('spriteCanvas');canvas.width=sprite.w;canvas.height=sprite.h;
+    canvas.style.width=sprite.w>=sprite.h?'100%':`${sprite.w/sprite.h*100}%`;
+    canvas.style.height=sprite.h>=sprite.w?'100%':`${sprite.h/sprite.w*100}%`;
+    paintSpriteCanvas();}
+}
+function paintSpriteCanvas(){const sprite=currentSprite();if(!sprite)return;const canvas=$('spriteCanvas'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,sprite.w,sprite.h);
+  sprite.pixels.forEach((color,index)=>{if(color){ctx.fillStyle=color;ctx.fillRect(index%sprite.w,Math.floor(index/sprite.w),1,1);}});
+}
+function selectSprite(name){activeSprite=name;project.activeSprite=name;renderSpriteList();save();}
+function selectSpriteTool(name){spriteTool=name;$('spritePencil').classList.toggle('selected',name==='pencil');$('spriteEraser').classList.toggle('selected',name==='eraser');}
+function drawAt(event){const sprite=currentSprite();if(!sprite)return;const rect=$('spriteCanvas').getBoundingClientRect();
+  const x=Math.floor((event.clientX-rect.left)*sprite.w/rect.width),y=Math.floor((event.clientY-rect.top)*sprite.h/rect.height);
+  if(x<0||y<0||x>=sprite.w||y>=sprite.h)return;
+  const color=spriteTool==='eraser'?null:$('spriteColor').value;
+  if(sprite.pixels[y*sprite.w+x]===color)return;
+  sprite.pixels[y*sprite.w+x]=color;paintSpriteCanvas();invalidate();save();
+}
+async function openProject(p){project=p;p.sprites??=[];active=p.files.find(f=>f.name===p.active)?.name||p.files[0].name;activeSprite=p.sprites.find(s=>s.name===p.activeSprite)?.name||p.sprites[0]?.name||'';$('home').hidden=true;$('workspace').hidden=false;$('projectName').textContent=p.name;$('saveStatus').textContent='Salvo neste navegador';$('diagnostics').textContent='Os erros aparecerão aqui, com arquivo e linha.';$('errorLabel').textContent='Erros';$('runtimeStatus').textContent='Pronto para compilar';$('exportGame').disabled=true;
   editor??=makeEditor($('editor'),code=>{if(!project)return;project.files.find(f=>f.name===active).code=code;invalidate();save();});
-  selectFile(active);showView('code');save();}
+  selectFile(active);renderSpriteList();showView('code');save();}
 function showErrors(items){$('diagnostics').replaceChildren();const errors=items.filter(d=>d.severity==='Error');$('errorLabel').textContent=errors.length?'Erros ('+errors.length+')':'Erros';for(const f of project.files)f.diagnostics=items.filter(d=>d.file===f.name);
   if(!items.length){const p=document.createElement('p');p.className='success';p.textContent='Compilado sem erros.';$('diagnostics').append(p);}
   for(const d of items){const b=document.createElement('button');b.className='diagnostic';b.textContent=`${d.file}:${d.line}:${d.column} · ${d.code} · ${d.message}`;const small=document.createElement('small');small.textContent=d.severity==='Error'?'Erro':'Aviso';b.append(small);b.onclick=()=>{if(project.files.some(f=>f.name===d.file)){selectFile(d.file);showView('code');editor.go(d.line);}};$('diagnostics').append(b);}
@@ -128,6 +153,30 @@ $('backup').onclick=()=>{if(project)download(project.name.replace(/[^a-z0-9_-]/g
 $('addFile').onclick=async()=>{const name=await ask('Novo arquivo C#','Player.cs');if(!name)return;if(!/^[A-Za-z_][\w-]*\.cs$/.test(name)||project.files.some(f=>f.name.toLowerCase()===name.toLowerCase())){notice('Use um nome .cs válido e ainda não utilizado.');return;}project.files.push({name,code:`public class ${name.slice(0,-3).replace(/-/g,'_')}\n{\n}\n`});invalidate();selectFile(name);showView('code');};
 $('renameFile').onclick=async()=>{if(active==='MainGame.cs'){notice('MainGame.cs é o arquivo principal.');return;}const name=await ask('Renomear arquivo',active);if(!name)return;if(!/^[A-Za-z_][\w-]*\.cs$/.test(name)||project.files.some(f=>f.name.toLowerCase()===name.toLowerCase())){notice('Nome inválido ou já utilizado.');return;}project.files.find(f=>f.name===active).name=name;invalidate();selectFile(name);};
 $('deleteFile').onclick=()=>{if(active==='MainGame.cs'){notice('MainGame.cs é necessário.');return;}if(!confirm(`Excluir ${active}?`))return;project.files=project.files.filter(f=>f.name!==active);invalidate();selectFile('MainGame.cs');};
+$('newSprite').onclick=async()=>{const name=await ask('Nome do sprite','hero');if(!name)return;
+  if(!/^[a-zA-Z_][\w-]{0,39}$/.test(name)||project.sprites.some(s=>s.name.toLowerCase()===name.toLowerCase())){notice('Use um nome de até 40 caracteres, sem espaços e ainda não usado.');return;}
+  project.sprites.push({name,w:16,h:16,pixels:Array(256).fill(null)});invalidate();selectSprite(name);showView('sprites');};
+$('importSprite').onclick=()=>$('spriteInput').click();
+$('spriteInput').onchange=async event=>{const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  try{if(file.type!=='image/png'&&!file.name.toLowerCase().endsWith('.png'))throw new Error('Selecione um arquivo PNG.');
+    const name=await ask('Nome do sprite importado',file.name.replace(/\.png$/i,'').replace(/[^\w-]/g,'_').slice(0,40));if(!name)return;
+    if(!/^[a-zA-Z_][\w-]{0,39}$/.test(name)||project.sprites.some(s=>s.name.toLowerCase()===name.toLowerCase()))throw new Error('Nome inválido ou já utilizado.');
+    const bitmap=await createImageBitmap(file);try{
+      if(bitmap.width<1||bitmap.height<1||bitmap.width>64||bitmap.height>64)throw new Error('Use um PNG entre 1 × 1 e 64 × 64 pixels.');
+      const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(bitmap,0,0);
+      const data=ctx.getImageData(0,0,bitmap.width,bitmap.height).data;const pixels=[];
+      for(let i=0;i<data.length;i+=4){pixels.push(data[i+3]===0?null:'#'+[data[i],data[i+1],data[i+2],data[i+3]].map(v=>v.toString(16).padStart(2,'0')).join(''));}
+      project.sprites.push({name,w:bitmap.width,h:bitmap.height,pixels});invalidate();selectSprite(name);showView('sprites');
+    }finally{bitmap.close();}
+  }catch(error){notice(error.message||String(error));}};
+$('deleteSprite').onclick=()=>{if(!currentSprite())return;if(!confirm(`Excluir o sprite ${activeSprite}?`))return;
+  project.sprites=project.sprites.filter(s=>s.name!==activeSprite);activeSprite=project.sprites[0]?.name||'';project.activeSprite=activeSprite;renderSpriteList();invalidate();save();};
+$('spritePencil').onclick=()=>selectSpriteTool('pencil');$('spriteEraser').onclick=()=>selectSpriteTool('eraser');
+for(const color of palette){const button=document.createElement('button');button.type='button';button.style.background=color;button.title=color;button.setAttribute('aria-label','Cor '+color);button.onclick=()=>{$('spriteColor').value=color;selectSpriteTool('pencil');};$('spritePalette').append(button);}
+$('spriteColor').oninput=()=>selectSpriteTool('pencil');
+$('spriteCanvas').addEventListener('pointerdown',event=>{event.preventDefault();$('spriteCanvas').setPointerCapture(event.pointerId);drawAt(event);});
+$('spriteCanvas').addEventListener('pointermove',event=>{if(event.buttons&1)drawAt(event);});
+$('downloadSprite').onclick=()=>{const sprite=currentSprite();if(!sprite)return;const link=document.createElement('a');link.download=sprite.name+'.png';link.href=$('spriteCanvas').toDataURL('image/png');document.body.append(link);link.click();link.remove();};
 document.querySelectorAll('.bottom-nav button').forEach(b=>b.onclick=()=>showView(b.dataset.view));
 document.querySelectorAll('.typing-tools button').forEach(b=>b.onclick=()=>editor.insert(b.dataset.insert));
 window.addEventListener('pagehide',()=>{if(project)putProject(project);});
