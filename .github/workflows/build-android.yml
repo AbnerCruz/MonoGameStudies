@@ -27,6 +27,13 @@ jobs:
         run: dotnet build mobileforge/src/Editor/MobileForge.Editor.csproj -c Debug -f net9.0-android -p:AndroidPackageFormat=apk -p:EmbedAssembliesIntoApk=true
       - name: Build sample standalone APK
         run: dotnet build mobileforge/src/GameTemplate/MobileForge.Game.csproj -c Debug -f net9.0-android -p:AndroidPackageFormat=apk -p:EmbedAssembliesIntoApk=true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MobileForge-Android-APKs
+          path: |
+            mobileforge/src/Editor/bin/Debug/net9.0-android/*-Signed.apk
+            mobileforge/src/GameTemplate/bin/Debug/net9.0-android/*-Signed.apk
+          if-no-files-found: error
       - name: Install and launch editor in Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -35,10 +42,3 @@ jobs:
           script: |
             adb install mobileforge/src/Editor/bin/Debug/net9.0-android/org.mobileforge.editor-Signed.apk
             adb shell am start -n org.mobileforge.editor/crc64a2e9c73616ba1620.MainActivity || adb shell monkey -p org.mobileforge.editor 1
-      - uses: actions/upload-artifact@v4
-        with:
-          name: MobileForge-Android-APKs
-          path: |
-            mobileforge/src/Editor/bin/Debug/net9.0-android/*-Signed.apk
-            mobileforge/src/GameTemplate/bin/Debug/net9.0-android/*-Signed.apk
-          if-no-files-found: error
