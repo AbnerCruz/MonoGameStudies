@@ -1,12 +1,13 @@
 // Shared by the editor and offline HTML. All user C# runs in this disposable worker.
 export async function forgeWorker() {
-  let api;
+  let api; const progress = message => self.postMessage({ debug: message });
   const blobs = new Map();
   const reply = (id, value) => self.postMessage({ id, value });
   self.onmessage = async ({ data }) => {
     const { id, type, payload } = data;
     try {
       if (type === 'boot') {
+        progress('Iniciando runtime .NET');
         let moduleUrl;
         let config;
         if (payload.pack) {
@@ -27,16 +28,16 @@ export async function forgeWorker() {
           }
           moduleUrl = blobs.get('dotnet.js');
         } else moduleUrl = new URL('_framework/dotnet.js', payload.base).href;
-        const { dotnet } = await import(moduleUrl);
+        const { dotnet } = await import(moduleUrl); progress('Módulo .NET carregado');
         let builder = dotnet.withDiagnosticTracing(false);
         if (config) builder = builder.withConfig(config).withResourceLoader((type, name) => {
           const url = blobs.get(name);
           if (!url) throw new Error('Recurso ausente no HTML: ' + name);
           return url;
         });
-        const runtime = await builder.create();
+        const runtime = await builder.create(); progress('Runtime .NET criado');
         const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
-        api = exports.Forge;
+        api = exports.Forge; progress('API C# pronta');
         reply(id, { ok: true });
       } else if (type === 'compile') reply(id, JSON.parse(api.Compile(JSON.stringify(payload))));
       else if (type === 'load') reply(id, JSON.parse(api.Load(payload)));

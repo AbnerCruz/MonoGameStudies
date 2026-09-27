@@ -57,6 +57,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
       stop(); workerUrl = URL.createObjectURL(new Blob([`(${workerSource})();`], { type:'text/javascript' }));
       worker = new Worker(workerUrl, { type: 'module' });
       worker.onmessage = ({data}) => {
+        if (data.debug) { console.info('MobileForge:', data.debug); return; }
         const task = pending.get(data.id); if (!task) return;
         clearTimeout(task.timer); pending.delete(data.id);
         if (data.value?.ok === false && data.value.error) task.reject(new Error(data.value.error)); else task.resolve(data.value);

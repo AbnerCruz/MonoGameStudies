@@ -9,11 +9,12 @@ try{
   browser=await chromium.launch({headless:true,args:['--disable-web-security']});
   const context=await browser.newContext({viewport:{width:390,height:844},acceptDownloads:true});
   const page=await context.newPage();
-  page.on('console',m=>{if(m.type()==='error')console.log('Browser:',m.text().slice(0,500));});
+  page.on('console',m=>console.log('Browser '+m.type()+':',m.text().slice(0,500)));page.on('requestfailed',r=>console.log('Request failed:',r.url(),r.failure()?.errorText));page.on('pageerror',e=>console.log('Page error:',e.message));
   await page.goto('http://127.0.0.1:8791/',{waitUntil:'networkidle'});
   await page.getByRole('button',{name:'Abrir exemplo com Player'}).click();
   await page.locator('#run').click();
-  await page.locator('#canvas[data-frames]').waitFor({timeout:180000});
+  await page.waitForTimeout(30000); console.log('Status:',await page.locator('#runtimeStatus').textContent(),'Diagnostics:',(await page.locator('#diagnostics').innerText()).slice(0,1600));
+  await page.locator('#canvas[data-frames]').waitFor({timeout:70000});
   await page.waitForFunction(()=>Number(document.querySelector('#canvas').dataset.frames)>4,{timeout:15000});
   console.log('Compiled two C# files and drew',await page.locator('#canvas').getAttribute('data-frames'),'frames');
   const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('#exportGame').click()]);
