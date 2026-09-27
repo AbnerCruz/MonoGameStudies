@@ -3,7 +3,7 @@ export async function forgeWorker() {
   let api; const progress = message => self.postMessage({ debug: message });
   const blobs = new Map();
   const reply = (id, value) => self.postMessage({ id, value });
-  self.onmessage = async ({ data }) => {
+  async function handleMessage({ data }) {
     const { id, type, payload } = data;
     try {
       if (type === 'boot') {
@@ -35,7 +35,10 @@ export async function forgeWorker() {
           if (!url) throw new Error('Recurso ausente no HTML: ' + name);
           return url;
         });
-        const runtime = await builder.create(); progress('Runtime .NET criado');
+        // .NET 9 checks onmessage during boot and otherwise mistakes this worker for a runtime sidecar.
+        self.onmessage = null;
+        const runtime = await builder.create();
+        self.onmessage = handleMessage; progress('Runtime .NET criado');
         const exports = await runtime.getAssemblyExports(runtime.getConfig().mainAssemblyName);
         api = exports.Forge; progress('API C# pronta');
         reply(id, { ok: true });
@@ -45,5 +48,6 @@ export async function forgeWorker() {
       else if (type === 'frame') reply(id, JSON.parse(api.Frame(JSON.stringify(payload))));
       else throw new Error('Operação desconhecida: ' + type);
     } catch (error) { reply(id, { ok: false, error: error.stack || String(error) }); }
-  };
+  }
+  self.onmessage = handleMessage;
 }
