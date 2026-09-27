@@ -28,6 +28,8 @@ export async function forgeWorker() {
           }
           moduleUrl = blobs.get('dotnet.js');
         } else moduleUrl = new URL('_framework/dotnet.js', payload.base).href;
+        // The loader checks onmessage as the module is imported, not just during create().
+        self.onmessage = null;
         const { dotnet } = await import(moduleUrl); progress('Módulo .NET carregado');
         let builder = dotnet.withDiagnosticTracing(false);
         if (config) builder = builder.withConfig(config).withResourceLoader((type, name) => {
