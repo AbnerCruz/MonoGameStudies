@@ -1,6 +1,6 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdtemp, stat } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 const server=spawn('python',['-m','http.server','8791','--directory','wwwroot'],{stdio:'ignore'});
@@ -62,6 +62,12 @@ try{
   const exportedPixel=await game.locator('canvas').evaluate(canvas=>[...canvas.getContext('2d').getImageData(32,80,1,1).data]);
   if(exportedPixel[0]!==255||exportedPixel[1]!==52||exportedPixel[2]!==86)throw Error('O sprite editado não foi exportado.');
   if(await game.locator('#error').isVisible())throw Error(await game.locator('#error').innerText());
+  if(process.env.FORGE_APK_SAMPLE){
+    const target=path.resolve(process.env.FORGE_APK_SAMPLE);
+    await mkdir(path.dirname(target),{recursive:true});
+    await copyFile(file,target);
+    console.log('Android sample prepared:',target);
+  }
   await offline.close();
   await page.locator('[data-view=code]').click();
   await page.getByRole('button',{name:'Player.cs'}).click();
