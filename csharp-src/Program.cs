@@ -66,7 +66,7 @@ public partial class Forge
             trees.Add(CSharpSyntaxTree.ParseText(engine, parse, path: "MobileForge.Engine.cs"));
             var compilation = CSharpCompilation.Create("Game_" + Guid.NewGuid().ToString("N"), trees,
                 Basic.Reference.Assemblies.Net90.References.All,
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release));
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release).WithConcurrentBuild(false));
             using var output = new MemoryStream();
             var result = compilation.Emit(output);
             var diagnostics = result.Diagnostics.Where(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning)

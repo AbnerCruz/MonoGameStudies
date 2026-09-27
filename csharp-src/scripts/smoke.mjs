@@ -13,8 +13,9 @@ try{
   await page.goto('http://127.0.0.1:8791/',{waitUntil:'networkidle'});
   await page.getByRole('button',{name:'Abrir exemplo com Player'}).click();
   await page.locator('#run').click();
-  await page.waitForTimeout(30000); console.log('Status:',await page.locator('#runtimeStatus').textContent(),'Diagnostics:',(await page.locator('#diagnostics').innerText()).slice(0,1600));
-  await page.locator('#canvas[data-frames]').waitFor({timeout:70000});
+  await page.waitForFunction(()=>Number(document.querySelector('#canvas')?.dataset.frames)>4 || ['Erro no jogo','Revise os erros de compilação'].includes(document.querySelector('#runtimeStatus')?.textContent),null,{timeout:120000});
+  console.log('Status:',await page.locator('#runtimeStatus').textContent(),'Diagnostics:',(await page.locator('#diagnostics').innerText()).slice(0,1600));
+  if (Number(await page.locator('#canvas').getAttribute('data-frames'))<5) throw Error('O exemplo C# não desenhou cinco quadros.');
   await page.waitForFunction(()=>Number(document.querySelector('#canvas').dataset.frames)>4,{timeout:15000});
   console.log('Compiled two C# files and drew',await page.locator('#canvas').getAttribute('data-frames'),'frames');
   const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('#exportGame').click()]);
