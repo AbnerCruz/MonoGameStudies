@@ -1,5 +1,5 @@
 // Kept self-contained so the identical player is embedded in exported games.
-export function createPlayer(canvas, workerSource, assets = [], onError = console.error) {
+export function createPlayer(canvas, workerSource, assets = [], onError = console.error, inlineBoot = null) {
   const ctx = canvas.getContext('2d');
   let worker, workerUrl, serial = 0, running = false, raf = 0, last = 0, frameCount = 0;
   const pending = new Map(), keys = new Set(), sprites = new Map();
@@ -54,7 +54,27 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   }
   return {
     async boot(payload) {
-      stop(); workerUrl = URL.createObjectURL(new Blob([`(${workerSource})();`], { type:'text/javascript' }));
+      stop();
+      if (payload.pack && inlineBoot) {
+        const api = await inlineBoot(payload.pack);
+        worker = { terminate() {}, postMessage({ id, type, payload: value }) {
+          queueMicrotask(() => {
+            let result;
+            try {
+              if (type === 'load') result = api.Load(value);
+              else if (type === 'start') result = api.Start();
+              else if (type === 'frame') result = api.Frame(JSON.stringify(value));
+              else throw new Error('Operação inválida: ' + type);
+              const data = JSON.parse(result);
+              const task = pending.get(id); if (!task) return;
+              clearTimeout(task.timer); pending.delete(id);
+              if (data.ok === false && data.error) task.reject(new Error(data.error)); else task.resolve(data);
+            } catch (error) { const task = pending.get(id); if (task) { clearTimeout(task.timer); pending.delete(id); task.reject(error); } }
+          });
+        } };
+        return { ok: true };
+      }
+      workerUrl = URL.createObjectURL(new Blob([`(${workerSource})();`], { type:'text/javascript' }));
       worker = new Worker(workerUrl, { type: 'module' });
       worker.onmessage = ({data}) => {
         if (data.debug) { console.info('MobileForge:', data.debug); return; }

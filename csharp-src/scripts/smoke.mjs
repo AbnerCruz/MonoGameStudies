@@ -6,7 +6,7 @@ import path from 'node:path';
 const server=spawn('python',['-m','http.server','8791','--directory','wwwroot'],{stdio:'ignore'});
 let browser;
 try{
-  browser=await chromium.launch({headless:true,args:['--disable-web-security']});
+  browser=await chromium.launch({headless:true});
   const context=await browser.newContext({viewport:{width:390,height:844},acceptDownloads:true});
   const page=await context.newPage();
   page.on('console',m=>console.log('Browser '+m.type()+':',m.text().slice(0,500)));page.on('requestfailed',r=>console.log('Request failed:',r.url(),r.failure()?.errorText));page.on('pageerror',e=>console.log('Page error:',e.message));
