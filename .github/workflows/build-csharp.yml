@@ -42,14 +42,14 @@ jobs:
           dotnet publish ForgeRuntime.csproj -c Release -o out/player -p:ForgePlayer=true
           cp -R out/editor/wwwroot/_framework wwwroot/_framework
           python scripts/pack.py out/player/wwwroot wwwroot/player-framework.pack.gz
-      - name: Compile, play and open exported HTML offline
+      - name: Compile, play and open exported ZIP offline
         working-directory: csharp-src
         run: node scripts/smoke.mjs
       - name: Assemble site
         run: |
           mkdir -p site/csharp
           cp index.html app.js styles.css runtime.js README.md PLANO.md .nojekyll site/
-          cp csharp-src/wwwroot/{index.html,app.css,app.js,player.js,worker.js,standalone.js,editor.bundle.js,player-framework.pack.gz} site/csharp/
+          cp csharp-src/wwwroot/{index.html,app.css,app.js,archive.js,player.js,worker.js,standalone.js,editor.bundle.js,player-framework.pack.gz} site/csharp/
           cp -R csharp-src/wwwroot/_framework site/csharp/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

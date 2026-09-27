@@ -1,14 +1,14 @@
 // Kept self-contained so the identical player is embedded in exported games.
-export function createPlayer(canvas, workerSource, assets = [], onError = console.error, inlineBoot = null) {
+export function createPlayer(canvas, workerSource, assets = [], onError = console.error, inlineBoot = null, maps = []) {
   const ctx = canvas.getContext('2d');
   let worker, workerUrl, serial = 0, running = false, raf = 0, last = 0, frameCount = 0;
-  const pending = new Map(), keys = new Set(), sprites = new Map();
+  const pending = new Map(), keys = new Set(), sprites = new Map(), tilemaps = new Map(maps.map(map=>[map.name,map]));
   const pointer = { x: 0, y: 0, down: false };
   for (const sprite of assets) {
     const surface = document.createElement('canvas'); surface.width = sprite.w; surface.height = sprite.h;
     const sc = surface.getContext('2d');
     sprite.pixels.forEach((color, index) => { if (color) { sc.fillStyle = color; sc.fillRect(index % sprite.w, Math.floor(index / sprite.w), 1, 1); } });
-    sprites.set(sprite.name, surface);
+    sprites.set(sprite.name, {surface,cellW:sprite.cellW||sprite.w,cellH:sprite.cellH||sprite.h});
   }
   const controller = new AbortController(), events = { signal: controller.signal };
   function position(e) { const b = canvas.getBoundingClientRect(); pointer.x = (e.clientX - b.left) * canvas.width / b.width; pointer.y = (e.clientY - b.top) * canvas.height / b.height; }
@@ -33,13 +33,26 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     });
   }
   function draw(commands) {
+    function tile(sheet,index,x,y,scale){
+      const asset=sprites.get(sheet);if(!asset)throw new Error(`Spritesheet "${sheet}" não encontrado.`);
+      const {surface,cellW,cellH}=asset,columns=Math.floor(surface.width/cellW),rows=Math.floor(surface.height/cellH);
+      if(!Number.isInteger(index)||index<0||index>=columns*rows)throw new Error(`Célula ${index} não existe em "${sheet}".`);
+      ctx.imageSmoothingEnabled=false;
+      ctx.drawImage(surface,(index%columns)*cellW,Math.floor(index/columns)*cellH,cellW,cellH,x,y,cellW*scale,cellH*scale);
+    }
     for (const c of commands) {
       ctx.fillStyle = c.color || '#fff';
       if (c.type === 'clear') ctx.fillRect(0,0,canvas.width,canvas.height);
       else if (c.type === 'rect') ctx.fillRect(c.x,c.y,c.width,c.height);
       else if (c.type === 'circle') { ctx.beginPath(); ctx.arc(c.x,c.y,Math.max(0,c.radius),0,Math.PI*2); ctx.fill(); }
       else if (c.type === 'text') { ctx.font = `${c.size}px system-ui`; ctx.fillText(c.text,c.x,c.y); }
-      else if (c.type === 'sprite') { const sprite = sprites.get(c.name); if (!sprite) throw new Error(`Sprite "${c.name}" não encontrado.`); ctx.imageSmoothingEnabled = false; ctx.drawImage(sprite,c.x,c.y,sprite.width*c.scale,sprite.height*c.scale); }
+      else if (c.type === 'sprite') { const asset = sprites.get(c.name); if (!asset) throw new Error(`Sprite "${c.name}" não encontrado.`); ctx.imageSmoothingEnabled = false; ctx.drawImage(asset.surface,c.x,c.y,asset.surface.width*c.scale,asset.surface.height*c.scale); }
+      else if (c.type === 'tile') tile(c.sheet,c.index,c.x,c.y,c.scale);
+      else if (c.type === 'tilemap') {
+        const map=tilemaps.get(c.name);if(!map)throw new Error(`Tilemap "${c.name}" não encontrado.`);
+        const sheet=sprites.get(map.sheet);if(!sheet)throw new Error(`Spritesheet "${map.sheet}" não encontrado.`);
+        for(let i=0;i<map.cells.length;i++)if(map.cells[i]>=0)tile(map.sheet,map.cells[i],c.x+(i%map.w)*sheet.cellW*c.scale,c.y+Math.floor(i/map.w)*sheet.cellH*c.scale,c.scale);
+      }
     }
   }
   async function tick(now) {

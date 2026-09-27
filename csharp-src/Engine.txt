@@ -37,6 +37,10 @@ namespace MobileForge
             => Add(new { type = "text", text, x, y, size, color });
         public static void Sprite(string name, float x, float y, float scale = 1)
             => Add(new { type = "sprite", name, x, y, scale });
+        public static void Tile(string sheet, int index, float x, float y, float scale = 1)
+            => Add(new { type = "tile", sheet, index, x, y, scale });
+        public static void Tilemap(string name, float x, float y, float scale = 1)
+            => Add(new { type = "tilemap", name, x, y, scale });
     }
     public static class __Entry
     {
