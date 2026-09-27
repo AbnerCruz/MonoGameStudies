@@ -7,7 +7,7 @@ Prova técnica mobile-first: editor de C# com Roslyn rodando em WebAssembly dent
 - Arquivos são compilados como C# separados, com erros por nome de arquivo e linha.
 - Compilação e prévia rodam em Web Worker, com tempo limite e botão Parar. O jogo exportado executa o runtime na página depois da extração do ZIP.
 - Cada projeto fica no IndexedDB do navegador; backup/importação em JSON.
-- O explorador aceita caminhos como `Actors/Player.cs`, com busca e pastas no editor. `MainGame.cs` continua na raiz do projeto.
+- O explorador aceita caminhos como `Actors/Player.cs`, com busca e pastas no editor. `MainGame.cs` continua na raiz do projeto. Cada arquivo mantém seu cursor e histórico de desfazer ao trocar de aba.
 - Aba Sprites desenha pixels, importa/exporta PNG, edita células de spritesheet, dispõe de ferramentas de balde, conta-gotas, desfazer/refazer e permite pintar tilemaps.
 - `Graphics.Tile` e `Graphics.Tilemap` desenham as peças no jogo C#.
 - Exportação é um ZIP com `index.html`, `game.js`, `game-data.js` e `runtime-data.js`, todos diretamente na raiz. É necessário extraí-los juntos. A estrutura de pastas do código no editor não é exportada para o jogo compilado.

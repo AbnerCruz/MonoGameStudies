@@ -1,5 +1,6 @@
 import { basicSetup } from 'codemirror';
 import { EditorView } from '@codemirror/view';
+import { EditorState } from '@codemirror/state';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
 import { tags } from '@lezer/highlight';
@@ -24,16 +25,27 @@ const colors = HighlightStyle.define([
   {tag:tags.operator,color:'#9bc4fa'},{tag:tags.definition(tags.variableName),color:'#f1ce91'}
 ]);
 export function makeEditor(parent, onChange) {
-  let switching = false;
-  const editor = new EditorView({parent, extensions:[basicSetup,StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
+  let currentKey = null;
+  const states = new Map();
+  const extensions=[basicSetup,StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
     EditorView.contentAttributes.of({autocorrect:'off',autocapitalize:'off',spellcheck:'false'}),
     autocompletion({override:[context=>{
       const word=context.matchBefore(/[\w.]+/); if(!word||(!context.explicit&&!word.text))return null;
       const parts=word.text.split('.'), known=members[parts[0]];
       return {from:known?word.from+parts[0].length+1:word.from,options:(known||words).map(label=>({label,type:known?'property':'keyword'}))};
-    }]}),EditorView.updateListener.of(update=>{if(update.docChanged&&!switching)onChange(update.state.doc.toString());})]});
+    }]}),EditorView.updateListener.of(update=>{if(update.docChanged)onChange(update.state.doc.toString());})];
+  const editor = new EditorView({parent,state:EditorState.create({doc:'',extensions})});
   return {
-    set(code){switching=true;editor.dispatch({changes:{from:0,to:editor.state.doc.length,insert:code},selection:{anchor:0}});switching=false;},
+    open(key,code){
+      if(currentKey)states.set(currentKey,editor.state);
+      currentKey=key;
+      let state=states.get(key);
+      if(!state||state.doc.toString()!==code)state=EditorState.create({doc:code,extensions});
+      editor.setState(state);
+    },
+    rename(oldKey,newKey){if(currentKey===oldKey){states.set(oldKey,editor.state);currentKey=newKey;}const state=states.get(oldKey);if(state){states.set(newKey,state);states.delete(oldKey);}},
+    forget(key){states.delete(key);if(currentKey===key)currentKey=null;},
+    clear(){states.clear();currentKey=null;},
     diagnostics(list){editor.dispatch(setDiagnostics(editor.state,list.map(d=>{const l=editor.state.doc.line(Math.min(Math.max(1,d.line),editor.state.doc.lines));const from=Math.min(l.to,l.from+d.column-1);return {from,to:Math.min(from+1,l.to),severity:d.severity==='Error'?'error':'warning',message:d.code+': '+d.message};})));},
     go(line){const l=editor.state.doc.line(Math.min(Math.max(line,1),editor.state.doc.lines));editor.dispatch({selection:{anchor:l.from},effects:EditorView.scrollIntoView(l.from,{y:'center'})});editor.focus();},
     insert(value){if(value==='undo')undo(editor);else if(value==='redo')redo(editor);else if(value==='tab')indentMore(editor);else editor.dispatch(editor.state.replaceSelection(value));editor.focus();},

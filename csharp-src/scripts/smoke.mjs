@@ -28,6 +28,12 @@ try{
   await page.locator('#filesToggle').click();
   if(await page.locator('#fileTree details summary').filter({hasText:'Actors'}).count()!==1)throw Error('Explorador não organizou arquivo em pasta.');
   await page.locator('#closeExplorer').click();
+  await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\n// HISTORIA_DO_ARQUIVO');
+  await page.getByRole('button',{name:'MainGame.cs'}).click();
+  await page.getByRole('button',{name:'Player.cs'}).click();
+  if(!(await page.locator('.cm-content').innerText()).includes('HISTORIA_DO_ARQUIVO'))throw Error('Troca de arquivo perdeu alterações.');
+  await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+z');
+  await page.waitForFunction(()=>!document.querySelector('.cm-content').textContent.includes('HISTORIA_DO_ARQUIVO'));
   await page.locator('[data-view=sprites]').click();
   await page.getByRole('button',{name:'hero'}).click();
   await page.locator('#spriteColor').fill('#ff3456');
