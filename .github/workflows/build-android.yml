@@ -28,8 +28,10 @@ jobs:
       - name: Verify APK signature and metadata
         run: |
           APK=mobileforge/src/Editor/bin/Debug/net9.0-android/org.mobileforge.editor-Signed.apk
-          apksigner verify --verbose "$APK"
-          aapt dump badging "$APK" | head -8
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          "$SIGNER" verify --verbose "$APK"
+          "$AAPT" dump badging "$APK" | head -8
       - uses: actions/upload-artifact@v4
         with:
           name: MobileForge-Android-APKs
