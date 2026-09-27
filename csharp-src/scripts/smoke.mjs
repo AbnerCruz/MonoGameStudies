@@ -12,11 +12,11 @@ try{
   page.on('console',m=>{if(m.type()==='error')console.log('Browser:',m.text().slice(0,500));});
   await page.goto('http://127.0.0.1:8791/',{waitUntil:'networkidle'});
   await page.getByRole('button',{name:'Abrir exemplo com Player'}).click();
-  await page.getByRole('button',{name:'▶ Executar'}).click();
+  await page.locator('#run').click();
   await page.locator('#canvas[data-frames]').waitFor({timeout:180000});
   await page.waitForFunction(()=>Number(document.querySelector('#canvas').dataset.frames)>4,{timeout:15000});
   console.log('Compiled two C# files and drew',await page.locator('#canvas').getAttribute('data-frames'),'frames');
-  const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.getByRole('button',{name:'↓ HTML offline'}).click()]);
+  const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('#exportGame').click()]);
   const directory=await mkdtemp(path.join(os.tmpdir(),'forge-'));
   const file=path.join(directory,'export.html');await download.saveAs(file);
   console.log('Exported:',(await stat(file)).size,'bytes');
@@ -30,10 +30,10 @@ try{
   console.log('Offline standalone:',await game.locator('canvas').getAttribute('data-frames'),'frames');
   if(await game.locator('#error').isVisible())throw Error(await game.locator('#error').innerText());
   await offline.close();
-  await page.getByRole('button',{name:'⌘Código'}).click();
+  await page.locator('[data-view=code]').click();
   await page.getByRole('button',{name:'Player.cs'}).click();
   await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\nINVALID_C_SHARP');
-  await page.getByRole('button',{name:'▶ Executar'}).click();
+  await page.locator('#run').click();
   await page.getByText(/Player.cs:\d+:/).first().waitFor({timeout:180000});
   console.log('Invalid C# diagnostic tied to Player.cs');
   await context.close();
