@@ -43,13 +43,14 @@ try{
   await page.locator('#newSheet').click();
   await page.locator('#dialogInput').fill('tiles');
   await page.locator('#nameDialog button[value=ok]').click();
-  if(await page.locator('#spriteTiles button').count()!==16)throw Error('Spritesheet 4 × 4 não apareceu.');
+  await page.waitForFunction(()=>document.querySelectorAll('#spriteTiles button').length===16,null,{timeout:5000});
   await page.locator('#spriteColor').fill('#33cc88');
   await page.locator('#spriteCanvas').click({position:{x:5,y:5}});
   await page.locator('#assetsMaps').click();
   await page.locator('#newMap').click();
   await page.locator('#dialogInput').fill('level');
   await page.locator('#nameDialog button[value=ok]').click();
+  await page.getByText('20 × 20 células').waitFor();
   await page.locator('#mapSheet').selectOption('tiles');
   await page.locator('#mapCanvas').click({position:{x:5,y:5}});
   await page.locator('[data-view=code]').click();
