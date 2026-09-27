@@ -27,7 +27,7 @@ jobs:
         run: dotnet build mobileforge/src/Editor/MobileForge.Editor.csproj -c Debug -f net9.0-android -p:AndroidPackageFormat=apk -p:EmbedAssembliesIntoApk=true -p:RuntimeIdentifier=android-arm64 -p:DebugSymbols=false -p:DebugType=None -p:SatelliteResourceLanguages=pt
       - name: Verify APK signature and metadata
         run: |
-          APK=mobileforge/src/Editor/bin/Debug/net9.0-android/org.mobileforge.editor-Signed.apk
+          APK=$(find mobileforge/src/Editor/bin/Debug -name "org.mobileforge.editor-Signed.apk" -type f | head -1)
           SIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
           AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
           "$SIGNER" verify --verbose "$APK"
@@ -36,5 +36,5 @@ jobs:
         with:
           name: MobileForge-Android-APKs
           path: |
-            mobileforge/src/Editor/bin/Debug/net9.0-android/*-Signed.apk
+            mobileforge/src/Editor/bin/Debug/**/*-Signed.apk
           if-no-files-found: error
