@@ -143,6 +143,7 @@ try{
   console.log('Invalid C# diagnostic tied to Actors/Player.cs');
   await page.locator('#homeButton').click();
   await page.locator('#openExample').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#tabs button').length===5);
   if(await page.locator('#tabs button').count()!==5)throw Error('O tutorial precisa dos cinco capítulos C#.');
   if(await page.locator('[data-view=guide]').count())throw Error('Guia antigo ainda existe.');
   await page.locator('[data-view=library]').click();

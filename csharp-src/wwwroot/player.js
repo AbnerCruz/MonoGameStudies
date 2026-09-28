@@ -66,7 +66,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
         const press=node.getAttribute('onpress');
         if(actionName.test(press?.trim()||'')) {
           const name=press.trim().match(actionName)[1];
-          element.style.pointerEvents='auto';
+          element.style.pointerEvents='auto';element.style.touchAction='none';
           element.addEventListener('pointerdown',e=>{if(e.button!==0||element.disabled)return;e.preventDefault();heldPointers.set(e.pointerId,{name,element});uiHeld.add(name);element.setPointerCapture(e.pointerId);});
           for(const event of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(event,e=>releasePointer(e.pointerId));
         }
