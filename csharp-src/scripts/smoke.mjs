@@ -146,7 +146,7 @@ try{
   const getPosition=()=>page.locator('#canvas').evaluate(canvas=>{const ctx=canvas.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x;}return -1;});
   const before=await getPosition();
   await page.locator('.mobileforge-ui button').last().click();
-  await page.waitForFunction(old=>{const c=document.querySelector('#canvas'),ctx=c.getContext('2d');return ctx.getImageData(old+20,280,1,1).data[0]===128;},before);
+  await page.waitForFunction(old=>{const c=document.querySelector('#canvas'),ctx=c.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x>=old+20;}return false;},before);
   const clicked=await getPosition();if(clicked<before+20)throw Error('onClick não moveu o jogo C#.');
   await page.locator('.mobileforge-ui input[type=range]').fill('300');
   const right=page.locator('.mobileforge-ui button').nth(1);const bounds=await right.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();
