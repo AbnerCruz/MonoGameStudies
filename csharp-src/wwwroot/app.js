@@ -92,9 +92,10 @@ public class MainGame : Game
     {
         UI.Set("""
         <style>
-        .pad { position:absolute; bottom:24px; left:18px; right:18px; display:flex; gap:12px; align-items:end; justify-content:space-between; }
-        .pad button { border:1px solid #80e6b9; border-radius:14px; background:#172e36d9; color:white; padding:12px 20px; font-size:22px; }
+        .pad { position:absolute; bottom:24px; left:18px; right:18px; display:flex; gap:5px; align-items:end; justify-content:space-between; }
+        .pad button { border:1px solid #80e6b9; border-radius:14px; background:#172e36d9; color:white; padding:8px 10px; font-size:18px; }
         .pad label { color:#e7f8ef; background:#172e36d9; padding:8px; border-radius:10px; font:12px system-ui; }
+        .pad input { width:90px; }
         </style>
         <div class="pad"><button onPress="Esquerda">◀</button><label>Velocidade<br><input id="velocidade" type="range" min="60" max="360" value="180" onInput="Ajustar"></label><button onPress="Direita">▶</button><button onClick="Passo()">+20</button></div>
         """);
