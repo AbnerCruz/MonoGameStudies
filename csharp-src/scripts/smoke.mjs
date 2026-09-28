@@ -25,7 +25,7 @@ try{
   await page.locator('#newProject').click();
   await page.locator('#dialogInput').fill('Projeto vazio');
   await page.locator('#nameDialog button[value=ok]').click();
-  const template=await page.locator('.cm-content').innerText();
+  const template=await page.locator('#editor .cm-content').innerText();
   if(!['void Start()','void Update(float dt)','void Draw()'].every(x=>template.includes(x)) || await page.locator('#tabs button').count()!==1)throw Error('Template inicial deixou de ser mínimo.');
   await page.locator('#focusMode').click();
   if(await page.locator('.bottom-nav').isVisible())throw Error('Modo foco não liberou espaço.');
@@ -46,12 +46,12 @@ try{
   await page.locator('#filesToggle').click();
   if(await page.locator('#fileTree details summary').filter({hasText:'Actors'}).count()!==1)throw Error('Explorador não organizou arquivo em pasta.');
   await page.locator('#closeExplorer').click();
-  await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\n// HISTORIA_DO_ARQUIVO');
+  await page.locator('#editor .cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\n// HISTORIA_DO_ARQUIVO');
   await page.getByRole('button',{name:'MainGame.cs'}).click();
   await page.getByRole('button',{name:'Player.cs'}).click();
-  if(!(await page.locator('.cm-content').innerText()).includes('HISTORIA_DO_ARQUIVO'))throw Error('Troca de arquivo perdeu alterações.');
-  await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+z');
-  await page.waitForFunction(()=>!document.querySelector('.cm-content').textContent.includes('HISTORIA_DO_ARQUIVO'));
+  if(!(await page.locator('#editor .cm-content').innerText()).includes('HISTORIA_DO_ARQUIVO'))throw Error('Troca de arquivo perdeu alterações.');
+  await page.locator('#editor .cm-content').focus();await page.keyboard.press('ControlOrMeta+z');
+  await page.waitForFunction(()=>!document.querySelector('#editor .cm-content').textContent.includes('HISTORIA_DO_ARQUIVO'));
   await page.locator('[data-view=sprites]').click();
   if(await page.locator('#tabs').isVisible()||await page.locator('.filebar').isVisible())throw Error('Ferramentas de código vazaram para a área de arte.');
   await page.getByRole('button',{name:'hero'}).click();
@@ -90,7 +90,7 @@ try{
   await page.screenshot({path:'out/ux/04-map.png'});
   await page.locator('[data-view=code]').click();
   await page.getByRole('button',{name:'MainGame.cs'}).click();
-  await page.locator('.cm-line').filter({hasText:'Player.Draw();'}).click();
+  await page.locator('#editor .cm-line').filter({hasText:'Player.Draw();'}).click();
   await page.keyboard.press('Home');
   await page.keyboard.type('Graphics.Tilemap("level", 200, 0);');
   await page.keyboard.press('Enter');
@@ -137,7 +137,7 @@ try{
   await offline.close();
   await page.locator('[data-view=code]').click();
   await page.getByRole('button',{name:'Player.cs'}).click();
-  await page.locator('.cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\nINVALID_C_SHARP');
+  await page.locator('#editor .cm-content').focus();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type('\nINVALID_C_SHARP');
   await page.locator('#run').click();
   await page.getByText(/Actors\/Player.cs:\d+:/).first().waitFor({timeout:180000});
   console.log('Invalid C# diagnostic tied to Actors/Player.cs');
