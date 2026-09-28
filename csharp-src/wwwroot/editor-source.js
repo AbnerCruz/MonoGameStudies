@@ -28,8 +28,8 @@ const colors = HighlightStyle.define([
 export function makeEditor(parent, onChange) {
   let currentKey = null;
   const states = new Map();
-  const wrapping=new Compartment();let wrapEnabled=false;
-  const extensions=[basicSetup,wrapping.of([]),StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
+  const wrapping=new Compartment();let wrapEnabled=matchMedia('(max-width:600px)').matches;
+  const extensions=[basicSetup,wrapping.of(wrapEnabled?EditorView.lineWrapping:[]),StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
     EditorView.contentAttributes.of({autocorrect:'off',autocapitalize:'off',spellcheck:'false'}),
     autocompletion({override:[context=>{
       const word=context.matchBefore(/[\w.]+/); if(!word||(!context.explicit&&!word.text))return null;

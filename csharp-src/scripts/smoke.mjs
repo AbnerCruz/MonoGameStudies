@@ -50,6 +50,11 @@ try{
   await page.locator('#spriteColor').fill('#ff3456');
   await page.locator('#spriteCanvas').click({position:{x:5,y:5}});
   await page.screenshot({path:'out/ux/03-art.png'});
+  await page.locator('#spriteZoom').fill('2');
+  await page.locator('#spritePan').click();
+  if(await page.locator('#spriteCanvas').getAttribute('data-pan')!=='true')throw Error('Navegação do canvas não ativou.');
+  await page.locator('#spritePencil').click();
+  await page.locator('#spriteZoom').fill('1');
   if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw Error('A interface transborda horizontalmente no celular.');
   const pixel=await page.locator('#spriteCanvas').evaluate(canvas=>[...canvas.getContext('2d').getImageData(0,0,1,1).data]);
   if(pixel[0]!==255||pixel[1]!==52||pixel[2]!==86)throw Error('Editor de sprites não alterou o pixel.');
