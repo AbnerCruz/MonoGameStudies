@@ -1,3 +1,4 @@
+import { setupStudioUI } from './studio-ui.js';
 import { makeEditor } from './editor.bundle.js';
 import { createPlayer } from './player.js';
 import { forgeWorker } from './worker.js';
@@ -112,8 +113,8 @@ function renderTree(){const tree=$('fileTree');tree.replaceChildren();if(!projec
   if(!tree.children.length){const empty=document.createElement('small');empty.textContent='Nenhum arquivo encontrado.';tree.append(empty);}
 }
 function renderTabs(){$('tabs').replaceChildren();for(const file of project.files){const button=document.createElement('button');button.textContent=file.name.split('/').at(-1);button.title=file.name;button.classList.toggle('selected',file.name===active);button.onclick=()=>selectFile(file.name);$('tabs').append(button);}renderTree();}
-function selectFile(name){active=name;project.active=name;const file=project.files.find(f=>f.name===name);if(!file)return;editor.open(project.id+'/'+name,file.code);editor.diagnostics(file.diagnostics||[]);renderTabs();setExplorer(false);save();}
-function showView(name){view=name;for(const section of ['code','sprites','game','errors','guide'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));}
+function selectFile(name){$('activePath').textContent=name;active=name;project.active=name;const file=project.files.find(f=>f.name===name);if(!file)return;editor.open(project.id+'/'+name,file.code);editor.diagnostics(file.diagnostics||[]);renderTabs();setExplorer(false);save();}
+function showView(name){view=name;$('workspace').dataset.view=name;document.querySelector('.tabs').hidden=name!=='code';document.querySelector('.filebar').hidden=name!=='code';if(name!=='code')$('workspace').classList.remove('workspace-focus');for(const section of ['code','sprites','game','errors','guide'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));}
 function currentSprite(){return project?.sprites.find(s=>s.name===activeSprite);}
 function currentMap(){return project?.tilemaps.find(m=>m.name===activeMap);}
 function sheetSize(sprite){return {cw:sprite.cellW||sprite.w,ch:sprite.cellH||sprite.h,cols:Math.floor(sprite.w/(sprite.cellW||sprite.w)),rows:Math.floor(sprite.h/(sprite.cellH||sprite.h))};}
@@ -281,4 +282,6 @@ document.querySelectorAll('.bottom-nav button').forEach(b=>b.onclick=()=>showVie
 document.querySelectorAll('.typing-tools button').forEach(b=>b.onclick=()=>editor.insert(b.dataset.insert));
 window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();if(project){clearTimeout(saving);project.updatedAt=Date.now();putProject(project).then(()=>$('saveStatus').textContent='Salvo neste navegador').catch(error=>notice(error.message));}}});
 window.addEventListener('pagehide',()=>{if(project)putProject(project);});
+setupStudioUI();
+document.addEventListener('forge:editor',event=>{if(!editor)return;const {kind,value}=event.detail;if(kind==='search'){showView('code');editor.search();}else editor.preference(kind,value);});
 home().catch(e=>notice('Armazenamento indisponível: '+e.message));

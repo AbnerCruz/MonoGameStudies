@@ -45,11 +45,18 @@ jobs:
       - name: Compile, play and open exported ZIP offline
         working-directory: csharp-src
         run: node scripts/smoke.mjs
+      - name: Save mobile UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MobileForge-UI
+          path: csharp-src/out/ux
+          retention-days: 7
       - name: Assemble site
         run: |
           mkdir -p site/csharp
           cp index.html app.js styles.css runtime.js README.md PLANO.md .nojekyll site/
-          cp csharp-src/wwwroot/{index.html,app.css,app.js,archive.js,player.js,worker.js,standalone.js,editor.bundle.js,player-framework.pack.gz} site/csharp/
+          cp csharp-src/wwwroot/{index.html,app.css,app.js,studio-ui.js,archive.js,player.js,worker.js,standalone.js,editor.bundle.js,player-framework.pack.gz} site/csharp/
           cp -R csharp-src/wwwroot/_framework site/csharp/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -1,6 +1,7 @@
+import { openSearchPanel } from '@codemirror/search';
 import { basicSetup } from 'codemirror';
 import { EditorView } from '@codemirror/view';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Compartment } from '@codemirror/state';
 import { StreamLanguage, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { csharp } from '@codemirror/legacy-modes/mode/clike';
 import { tags } from '@lezer/highlight';
@@ -8,12 +9,12 @@ import { autocompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { undo, redo, indentMore } from '@codemirror/commands';
 const words = ['public','private','protected','class','override','new','using','namespace','float','int','string','bool','void','return','if','else','foreach','for','while','static','readonly','List','Math','MainGame','Game','Start','Update','Draw','Input','Graphics'];
-const members = { Input:['X','Y','Down','Key'], Graphics:['Clear','Rect','Circle','Text','Sprite'] };
+const members = { Input:['X','Y','Down','Key'], Graphics:['Clear','Rect','Circle','Text','Sprite','Tile','Tilemap'] };
 const theme = EditorView.theme({
-  '&': { height:'100%', backgroundColor:'#10151f', color:'#dce4f5', fontSize:'14px' },
+  '&': { height:'100%', backgroundColor:'#111216', color:'#dce4f5', fontSize:'var(--code-size,14px)' },
   '.cm-content': { fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace', caretColor:'#80e6b9', padding:'16px 0' },
-  '.cm-scroller': { overflow:'auto' }, '.cm-gutters':{ backgroundColor:'#10151f',color:'#5d6b83',border:'none',paddingRight:'6px' },
-  '.cm-activeLine,.cm-activeLineGutter':{ backgroundColor:'#1a2333' },
+  '.cm-scroller': { overflow:'auto' }, '.cm-gutters':{ backgroundColor:'#111216',color:'#5d6b83',border:'none',paddingRight:'6px' },
+  '.cm-activeLine,.cm-activeLineGutter':{ backgroundColor:'#1c1f2b' },
   '.cm-selectionBackground':{backgroundColor:'#314369 !important'},
   '.cm-tooltip':{backgroundColor:'#202c40',border:'1px solid #3a4d69'},
   '.cm-cursor':{borderLeftColor:'#80e6b9'},'.cm-panels':{backgroundColor:'#202c40',color:'#dce4f5'}
@@ -27,7 +28,8 @@ const colors = HighlightStyle.define([
 export function makeEditor(parent, onChange) {
   let currentKey = null;
   const states = new Map();
-  const extensions=[basicSetup,StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
+  const wrapping=new Compartment();let wrapEnabled=false;
+  const extensions=[basicSetup,wrapping.of([]),StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),
     EditorView.contentAttributes.of({autocorrect:'off',autocapitalize:'off',spellcheck:'false'}),
     autocompletion({override:[context=>{
       const word=context.matchBefore(/[\w.]+/); if(!word||(!context.explicit&&!word.text))return null;
@@ -41,7 +43,7 @@ export function makeEditor(parent, onChange) {
       currentKey=key;
       let state=states.get(key);
       if(!state||state.doc.toString()!==code)state=EditorState.create({doc:code,extensions});
-      editor.setState(state);
+      editor.setState(state);editor.dispatch({effects:wrapping.reconfigure(wrapEnabled?EditorView.lineWrapping:[])});
     },
     rename(oldKey,newKey){if(currentKey===oldKey){states.set(oldKey,editor.state);currentKey=newKey;}const state=states.get(oldKey);if(state){states.set(newKey,state);states.delete(oldKey);}},
     forget(key){states.delete(key);if(currentKey===key)currentKey=null;},
@@ -49,6 +51,8 @@ export function makeEditor(parent, onChange) {
     diagnostics(list){editor.dispatch(setDiagnostics(editor.state,list.map(d=>{const l=editor.state.doc.line(Math.min(Math.max(1,d.line),editor.state.doc.lines));const from=Math.min(l.to,l.from+d.column-1);return {from,to:Math.min(from+1,l.to),severity:d.severity==='Error'?'error':'warning',message:d.code+': '+d.message};})));},
     go(line){const l=editor.state.doc.line(Math.min(Math.max(line,1),editor.state.doc.lines));editor.dispatch({selection:{anchor:l.from},effects:EditorView.scrollIntoView(l.from,{y:'center'})});editor.focus();},
     insert(value){if(value==='undo')undo(editor);else if(value==='redo')redo(editor);else if(value==='tab')indentMore(editor);else editor.dispatch(editor.state.replaceSelection(value));editor.focus();},
+    search(){openSearchPanel(editor);},
+    preference(kind,value){if(kind==='wrap'){wrapEnabled=value;editor.dispatch({effects:wrapping.reconfigure(value?EditorView.lineWrapping:[])});}else if(kind==='size')editor.requestMeasure();},
     get(){return editor.state.doc.toString();}
   };
 }
