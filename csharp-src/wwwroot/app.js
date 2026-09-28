@@ -96,9 +96,12 @@ public class MainGame : Game
         .pad button { border:1px solid #80e6b9; border-radius:14px; background:#172e36d9; color:white; padding:8px 10px; font-size:18px; }
         .pad label { color:#e7f8ef; background:#172e36d9; padding:8px; border-radius:10px; font:12px system-ui; }
         .pad input { width:90px; }
+        .hud { position:absolute; top:70px; left:22px; font:14px system-ui; color:#80e6b9; }
         </style>
-        <div class="pad"><button onPress="Esquerda">◀</button><label>Velocidade<br><input id="velocidade" type="range" min="60" max="360" value="180" onInput="Ajustar"></label><button onPress="Direita">▶</button><button onClick="Passo()">+20</button></div>
+        <div class="hud">X: <span id="posicao">150</span> · Colisão: <span id="colisao">Livre</span></div>
+        <div class="pad"><button onPress="Esquerda">◀</button><label>Velocidade <span id="ritmo">180</span><br><input id="velocidade" type="range" min="60" max="360" value="180" onInput="Ajustar"></label><button onPress="Direita">▶</button><button onClick="Passo()">+20</button></div>
         """);
+        UI.SetValue("velocidade", "180");
     }
 
     public void Ajustar(UIEvent e) { Speed = e.Number; }
@@ -114,6 +117,11 @@ public class MainGame : Game
         Clear("#101827");
         Graphics.Text("Segure os botões para mover", 22, 48, 18);
         Graphics.Rect(Position.X, Position.Y, 32, 32, "#80e6b9");
+        var contato = Collision.Intersects(new RectF(Position.X, Position.Y, 32, 32), new CircleF(280, 296, 20));
+        Graphics.Circle(280, 296, 20, contato ? "#ffcc92" : "#344e70");
+        UI.SetText("colisao", contato ? "Contato" : "Livre");
+        UI.SetText("posicao", ((int)Position.X).ToString());
+        UI.SetText("ritmo", ((int)Speed).ToString());
     }
 }
 `;

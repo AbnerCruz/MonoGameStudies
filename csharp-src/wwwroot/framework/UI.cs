@@ -13,11 +13,19 @@ namespace MobileForge
         public float Number => float.TryParse(Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : 0;
     }
 
+    public sealed class UIElementState
+    {
+        public string? Text { get; set; }
+        public string? Value { get; set; }
+        public bool? Visible { get; set; }
+    }
+
     // Declarative HTML/CSS overlay. Methods and callbacks run on the C# game loop.
     public static class UI
     {
         static readonly Dictionary<string, Action<UIEvent>> callbacks = new(StringComparer.Ordinal);
         static readonly Dictionary<string, string> values = new(StringComparer.Ordinal);
+        internal static readonly Dictionary<string, UIElementState> Elements = new(StringComparer.Ordinal);
         static readonly HashSet<string> held = new(StringComparer.Ordinal);
         public static string Markup { get; private set; } = "";
         public static UIEvent Event { get; private set; }
@@ -28,7 +36,16 @@ namespace MobileForge
         public static bool Held(string name) => held.Contains(name);
         public static string Value(string id) => values.TryGetValue(id, out var value) ? value : "";
         public static float Number(string id) => float.TryParse(Value(id), NumberStyles.Float, CultureInfo.InvariantCulture, out var n) ? n : 0;
-        internal static void Reset() { Markup = ""; callbacks.Clear(); values.Clear(); held.Clear(); Event = default; }
+        static UIElementState Element(string id)
+        {
+            if (!Elements.TryGetValue(id, out var state)) Elements[id] = state = new UIElementState();
+            return state;
+        }
+        // Update individual elements without rebuilding markup or interrupting a slider.
+        public static void SetText(string id, string text) => Element(id).Text = text;
+        public static void SetValue(string id, string value) { Element(id).Value = value; values[id] = value; }
+        public static void SetVisible(string id, bool visible) => Element(id).Visible = visible;
+        internal static void Reset() { Markup = ""; callbacks.Clear(); values.Clear(); held.Clear(); Elements.Clear(); Event = default; }
         internal static void Bind(object owner)
         {
             foreach (var method in owner.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))

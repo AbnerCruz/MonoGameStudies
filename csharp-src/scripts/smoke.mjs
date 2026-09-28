@@ -145,13 +145,17 @@ try{
   await page.locator('.mobileforge-ui button').first().waitFor();
   const getPosition=()=>page.locator('#canvas').evaluate(canvas=>{const ctx=canvas.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x;}return -1;});
   const before=await getPosition();
+  await page.waitForFunction(x=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('posicao')?.textContent===String(x),before);
   await page.locator('.mobileforge-ui button').last().click();
   await page.waitForFunction(old=>{const c=document.querySelector('#canvas'),ctx=c.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x>=old+20;}return false;},before);
   const clicked=await getPosition();if(clicked<before+20)throw Error('onClick não moveu o jogo C#.');
+  await page.waitForFunction(x=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('posicao')?.textContent===String(x),clicked);
   await page.locator('.mobileforge-ui input[type=range]').fill('300');
+  await page.waitForFunction(()=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('ritmo')?.textContent==='300');
   const right=page.locator('.mobileforge-ui button').nth(1);const bounds=await right.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();
   await page.waitForTimeout(250);await page.mouse.up();
   const after=await getPosition();if(after<=clicked)throw Error('onPress e slider não moveram o jogo.');
+  if(await page.locator('.mobileforge-ui input[type=range]').inputValue()!=='300')throw Error('Atualização de UI interrompeu o slider.');
   console.log('UI actions moved rectangle:',before,clicked,after);
 
   await context.close();

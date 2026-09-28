@@ -10,6 +10,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   document.body.append(uiHost);
   const shadow = uiHost.attachShadow({mode:'open'});
   let currentMarkup = '', uiEvents = [];
+  const appliedUI = new Map();
   const uiHeld = new Set();
   const actionName = /^([A-Za-z_][\w]*)(?:\(\))?$/;
   function alignUI() {
@@ -28,10 +29,11 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     if (markup === currentMarkup) return;
     currentMarkup = markup;
     uiHeld.clear();
+    appliedUI.clear();
     shadow.replaceChildren();
     if (!markup) return;
     const base=document.createElement('style');
-    base.textContent=':host{font:16px system-ui;color:white}.root{position:relative;width:100%;height:100%;box-sizing:border-box;pointer-events:none}.root button,.root input,.root select{pointer-events:auto;touch-action:manipulation;font:inherit}.root button{min-width:44px;min-height:44px;cursor:pointer}';
+    base.textContent=':host{font:16px system-ui;color:white}.root{position:relative;width:100%;height:100%;box-sizing:border-box;pointer-events:none}.root [hidden]{display:none!important}.root button,.root input,.root select{pointer-events:auto;touch-action:manipulation;font:inherit}.root button{min-width:44px;min-height:44px;cursor:pointer}';
     const root=document.createElement('div');root.className='root';
     const parsed=new DOMParser().parseFromString(markup,'text/html');
     const allowed=new Set(['DIV','SPAN','P','SECTION','HEADER','FOOTER','BUTTON','INPUT','LABEL','IMG','PROGRESS','OUTPUT','STRONG','SMALL','H1','H2','H3','BR','STYLE']);
@@ -66,6 +68,17 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     }
     copy(parsed.head,root);copy(parsed.body,root);
     shadow.append(base,root);alignUI();
+  }
+  function renderUIState(states) {
+    for(const [id,state] of Object.entries(states)) {
+      const element=shadow.getElementById(id);
+      if(!element)continue;
+      const old=appliedUI.get(id)||{};
+      if(state.Text!==null&&state.Text!==undefined&&state.Text!==old.Text)element.textContent=state.Text;
+      if(state.Value!==null&&state.Value!==undefined&&state.Value!==old.Value&&'value' in element)element.value=state.Value;
+      if(state.Visible!==null&&state.Visible!==undefined&&state.Visible!==old.Visible)element.hidden=!state.Visible;
+      appliedUI.set(id,{...state});
+    }
   }
   for (const sprite of assets) {
     const surface = document.createElement('canvas'); surface.width = sprite.w; surface.height = sprite.h;
@@ -127,7 +140,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
       const outgoing=uiEvents;uiEvents=[];
       const result = await call('frame', { ...pointer, keys: [...keys], dt, uiEvents:outgoing, uiHeld:[...uiHeld] }, 3000);
       if (!running) return;
-      draw(result.commands);renderUI(result.ui||''); frameCount++; canvas.dataset.frames = frameCount;
+      draw(result.commands);renderUI(result.ui||'');renderUIState(result.uiState||{});frameCount++; canvas.dataset.frames = frameCount;
       raf = requestAnimationFrame(tick);
     } catch (error) { if (running) { stop(); onError(error); } }
   }

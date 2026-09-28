@@ -11,8 +11,8 @@ Prova técnica mobile-first: editor de C# com Roslyn rodando em WebAssembly dent
 - Aba Sprites desenha pixels, importa/exporta PNG, edita células de spritesheet, dispõe de ferramentas de balde, conta-gotas, desfazer/refazer e permite pintar tilemaps.
 - `Graphics.Tile` e `Graphics.Tilemap` desenham as peças no jogo C#.
 - Bibliotecas em `wwwroot/framework/`: `Game.cs`, `Math.cs`, `Collision.cs`, `UI.cs`. São os mesmos arquivos embutidos no compilador e exibidos em modo somente leitura no Guia.
-- UI aceita HTML/CSS declarativo, `onClick`, `onInput`, `onChange`, `onPress` e callbacks de C#, com controles posicionados sobre o canvas e sprites em `<img src="sprite:hero">`.
-- `Vector2`, `GameMath`, `Randomizer`, `RectF`, `CircleF`, `Collision` oferecem matemática e consultas de geometria sem regras de movimento impostas.
+- UI aceita HTML/CSS declarativo, `onClick`, `onInput`, `onChange`, `onPress` e callbacks de C#, com controles posicionados sobre o canvas e sprites em `<img src="sprite:hero">`. `UI.SetText`, `UI.SetValue` e `UI.SetVisible` atualizam elementos por ID sem reconstruir a interface.
+- `Vector2`, `GameMath`, `Randomizer`, `RectF`, `CircleF`, `Collision` oferecem matemática e consultas de geometria, incluindo segmentos contra círculos e retângulos, sem regras de movimento impostas.
 - Exportação é um ZIP com `index.html`, `game.js`, `game-data.js` e `runtime-data.js`, todos diretamente na raiz. É necessário extraí-los juntos. A estrutura de pastas do código no editor não é exportada para o jogo compilado.
 
 ## Build

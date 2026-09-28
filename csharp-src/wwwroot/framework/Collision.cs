@@ -33,6 +33,28 @@ namespace MobileForge
         public static bool Intersects(CircleF circle, RectF rect) => Intersects(rect, circle);
         public static bool PointIn(RectF rect, Vector2 point) => rect.Contains(point);
         public static bool PointIn(CircleF circle, Vector2 point) => circle.Contains(point);
+        public static Vector2 ClosestPointOnSegment(Vector2 point, Vector2 a, Vector2 b)
+        {
+            var direction = b - a;
+            var lengthSquared = direction.LengthSquared;
+            if (lengthSquared == 0) return a;
+            var t = Math.Clamp(Vector2.Dot(point - a, direction) / lengthSquared, 0, 1);
+            return a + direction * t;
+        }
+        public static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
+            => Vector2.Distance(point, ClosestPointOnSegment(point, a, b));
+        public static bool Intersects(CircleF circle, Vector2 a, Vector2 b)
+            => (circle.Center - ClosestPointOnSegment(circle.Center, a, b)).LengthSquared <= circle.Radius * circle.Radius;
+        public static bool Intersects(RectF rect, Vector2 a, Vector2 b)
+        {
+            if (rect.Contains(a) || rect.Contains(b)) return true;
+            var topLeft = new Vector2(rect.Left, rect.Top);
+            var topRight = new Vector2(rect.Right, rect.Top);
+            var bottomLeft = new Vector2(rect.Left, rect.Bottom);
+            var bottomRight = new Vector2(rect.Right, rect.Bottom);
+            return SegmentsIntersect(a, b, topLeft, topRight) || SegmentsIntersect(a, b, topRight, bottomRight) ||
+                   SegmentsIntersect(a, b, bottomRight, bottomLeft) || SegmentsIntersect(a, b, bottomLeft, topLeft);
+        }
         public static bool SegmentsIntersect(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
         {
             var ab = b - a; var cd = d - c; var denominator = Vector2.Cross(ab, cd);
