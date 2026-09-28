@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, stat, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 const server=spawn('python',['-m','http.server','8791','--directory','wwwroot'],{stdio:'ignore'});
@@ -31,7 +31,7 @@ try{
   if(await page.locator('.bottom-nav').isVisible())throw Error('Modo foco não liberou espaço.');
   await page.locator('#focusExit').click();
   await page.locator('#homeButton').click();
-  await page.getByRole('button',{name:'Abrir exemplo com Player'}).click();
+  await page.locator('#importInput').setInputFiles('scripts/fixtures/core.json');
   await page.screenshot({path:'out/ux/02-code.png'});
   await page.locator('#projectMenuToggle').click();
   await page.locator('#codeWrap').check();
@@ -142,32 +142,118 @@ try{
   await page.getByText(/Actors\/Player.cs:\d+:/).first().waitFor({timeout:180000});
   console.log('Invalid C# diagnostic tied to Actors/Player.cs');
   await page.locator('#homeButton').click();
-  await page.getByRole('button',{name:'Testar controles e UI'}).click();
-  await page.locator('[data-view=guide]').click();
-  await page.locator('#readMathSource').click();
-  if(!await page.locator('#libraryView').isVisible()||!await page.locator('#frameworkTabs button').filter({hasText:'Math.cs'}).evaluate(button=>button.classList.contains('selected')))throw Error('O Guia não abre Math.cs diretamente.');
+  await page.locator('#openExample').click();
+  if(await page.locator('#tabs button').count()!==5)throw Error('O tutorial precisa dos cinco capítulos C#.');
+  if(await page.locator('[data-view=guide]').count())throw Error('Guia antigo ainda existe.');
+  await page.locator('[data-view=library]').click();
+  await page.locator('#frameworkTabs button').filter({hasText:'Math.cs'}).click();
   await page.locator('#frameworkViewer .cm-content').getByText('public struct Vector2').waitFor();
-  await page.locator('#frameworkTabs button').filter({hasText:'UI.cs'}).click();
-  await page.locator('#frameworkViewer .cm-content').getByText('public static class UI').waitFor();
-  if(await page.locator('#frameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Biblioteca deveria ser somente leitura.');
-  await page.locator('#run').click();
-  await page.waitForFunction(()=>Number(document.querySelector('#canvas').dataset.frames)>4 || document.querySelector('#runtimeStatus').textContent.includes('erro'),null,{timeout:120000});
-  console.log('Controls status:',await page.locator('#runtimeStatus').textContent(),'Diagnostics:',(await page.locator('#diagnostics').innerText()).slice(0,800));
-  await page.locator('.mobileforge-ui button').first().waitFor();
-  const getPosition=()=>page.locator('#canvas').evaluate(canvas=>{const ctx=canvas.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x;}return -1;});
-  const before=await getPosition();
-  await page.waitForFunction(x=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('posicao')?.textContent===String(x),before);
-  await page.locator('.mobileforge-ui button').last().click();
-  await page.waitForFunction(old=>{const c=document.querySelector('#canvas'),ctx=c.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x>=old+20;}return false;},before);
-  const clicked=await getPosition();if(clicked<before+20)throw Error('onClick não moveu o jogo C#.');
-  await page.waitForFunction(x=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('posicao')?.textContent===String(x),clicked);
-  await page.locator('.mobileforge-ui input[type=range]').fill('300');
-  await page.waitForFunction(()=>document.querySelector('.mobileforge-ui')?.shadowRoot.getElementById('ritmo')?.textContent==='300');
-  const right=page.locator('.mobileforge-ui button').nth(1);const bounds=await right.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();
-  await page.waitForTimeout(250);await page.mouse.up();
-  const after=await getPosition();if(after<=clicked)throw Error('onPress e slider não moveram o jogo.');
-  if(await page.locator('.mobileforge-ui input[type=range]').inputValue()!=='300')throw Error('Atualização de UI interrompeu o slider.');
-  console.log('UI actions moved rectangle:',before,clicked,after);
+  if(await page.locator('#frameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Fonte deveria ser somente leitura.');
+  async function runMission() {
+    await page.locator('#run').click();
+    await page.waitForFunction(()=>document.querySelector('#runtimeStatus').textContent==='C# compilado • Jogo em execução'||['Erro no jogo','Revise os erros de compilação'].includes(document.querySelector('#runtimeStatus').textContent),null,{timeout:180000});
+    if(await page.locator('#runtimeStatus').textContent()!=='C# compilado • Jogo em execução')throw Error(await page.locator('#diagnostics').innerText());
+    await page.getByRole('button',{name:'Iniciar missão',exact:true}).waitFor();
+  }
+  await runMission();
+  await page.screenshot({path:'out/ux/05-orbita-menu.png'});
+  await page.getByRole('button',{name:'Iniciar missão',exact:true}).click();
+  await page.locator('.mobileforge-ui #controls').waitFor();
+  const shipX=()=>page.locator('#canvas').evaluate(canvas=>{
+    const ctx=canvas.getContext('2d');
+    for(let x=0;x<360;x++){const p=ctx.getImageData(x,454,1,1).data;if(p[0]===138&&p[1]===243&&p[2]===208)return x;}
+    return -1;
+  });
+  const before=await shipX();
+  const right=page.getByRole('button',{name:'Mover para direita',exact:true});
+  const bounds=await right.boundingBox();
+  // Native touch events exercise capture and Android-like long press behavior.
+  const cdp=await context.newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:bounds.x+bounds.width/2,y:bounds.y+bounds.height/2,id:1}]});
+  await page.waitForTimeout(650);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  const after=await shipX();
+  if(before<0||after<=before)throw Error('Segurar controle não moveu a nave.');
+  if(await right.evaluate(el=>getComputedStyle(el).userSelect)!=='none')throw Error('Botão permite seleção de texto.');
+  if(await page.evaluate(()=>String(getSelection()).length))throw Error('Toque selecionou texto.');
+  for(const type of ['selectstart','contextmenu','dragstart']) {
+    if(!await right.evaluate((el,type)=>!el.dispatchEvent(new Event(type,{bubbles:true,cancelable:true,composed:true})),type))throw Error('Gesto nativo não bloqueado: '+type);
+  }
+  const leftBounds=await page.getByRole('button',{name:'Mover para esquerda',exact:true}).boundingBox();
+  const finger1={x:leftBounds.x+leftBounds.width/2-5,y:leftBounds.y+leftBounds.height/2,id:11};
+  const finger2={x:leftBounds.x+leftBounds.width/2+5,y:leftBounds.y+leftBounds.height/2,id:12};
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[finger1]});
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[finger1,finger2]});
+  await page.waitForTimeout(100);
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[finger2]});
+  const oneFingerX=await shipX();
+  await page.waitForTimeout(150);
+  if(await shipX()>=oneFingerX)throw Error('Soltar um dedo cancelou o outro dedo na mesma ação.');
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+  await page.getByRole('button',{name:'Pausar missão'}).click();
+  const pausedHealth=await page.locator('.mobileforge-ui #health').textContent();
+  await page.waitForTimeout(250);
+  if(await page.locator('.mobileforge-ui #health').textContent()!==pausedHealth)throw Error('Pausa não congelou o jogo.');
+  await page.getByRole('slider',{name:'Velocidade da nave'}).fill('300');
+  await page.waitForFunction(()=>document.querySelector('.mobileforge-ui').shadowRoot.getElementById('speed').textContent==='300');
+  await page.getByRole('button',{name:'Continuar',exact:true}).click();
+  await page.screenshot({path:'out/ux/06-orbita-playing.png'});
+  // Release/cancel must not leave a direction stuck after pause.
+  await page.waitForTimeout(100);
+  const stoppedX=await shipX();
+  await page.waitForTimeout(150);
+  if(await shipX()!==stoppedX)throw Error('Direção permaneceu presa após soltar.');
+  await page.getByRole('button',{name:'Pausar missão'}).click();
+  if(await page.getByRole('slider',{name:'Velocidade da nave'}).inputValue()!=='300')throw Error('HUD sobrescreveu slider.');
+  await page.locator('.mobileforge-ui #pause').getByRole('button',{name:'Voltar ao início',exact:true}).click();
+  await page.getByRole('button',{name:'Iniciar missão',exact:true}).click();
+  await page.locator('.mobileforge-ui #score').getByText('0 / 12 células',{exact:true}).waitFor();
+
+  // Export the actual tutorial as well as the primitive regression fixture.
+  const [missionDownload]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('#exportGame').click()]);
+  const missionDir=await mkdtemp(path.join(os.tmpdir(),'orbita-'));
+  const missionZip=path.join(missionDir,'game.zip');await missionDownload.saveAs(missionZip);
+  const missionNames=execFileSync('unzip',['-Z1',missionZip],{encoding:'utf8'}).trim().split('\n');
+  if(missionNames.length!==4||missionNames.some(name=>name.includes('/')))throw Error('Jogo tutorial não exportou na raiz.');
+  execFileSync('unzip',['-q',missionZip,'-d',missionDir]);
+  const offlineMission=await browser.newContext({viewport:{width:390,height:844}});
+  await offlineMission.route('**/*',route=>/^(file|blob):/.test(route.request().url())?route.continue():route.abort());
+  const exported=await offlineMission.newPage();
+  await exported.goto('file://'+path.join(missionDir,'index.html'));
+  await exported.getByRole('button',{name:'Iniciar missão',exact:true}).waitFor({timeout:180000});
+  await exported.getByRole('button',{name:'Iniciar missão',exact:true}).click();
+  await exported.getByRole('button',{name:'Pausar missão'}).click();
+  await exported.getByRole('button',{name:'Continuar',exact:true}).waitFor();
+  if(await exported.locator('#error').isVisible())throw Error(await exported.locator('#error').innerText());
+  await offlineMission.close();
+
+  // Test end states using the same sources with short, documented game rules.
+  const chapters=['MainGame.cs','Player.cs','FallingItem.cs','Starfield.cs','GameHud.cs'];
+  const sourceFiles=await Promise.all(chapters.map(async name=>({name,code:await readFile('wwwroot/examples/'+name,'utf8')})));
+  // Read the actual example assets from its project backup, not fabricated ones.
+  await page.locator('#projectMenuToggle').click();
+  const [backup]=await Promise.all([page.waitForEvent('download'),page.locator('#backup').click()]);
+  const backupPath=await backup.path();const mission=JSON.parse(await readFile(backupPath,'utf8'));
+  async function variant(name,transform) {
+    await page.locator('#homeButton').click();
+    const files=sourceFiles.map(f=>({...f,code:f.name==='MainGame.cs'?transform(f.code):f.code}));
+    await page.locator('#importInput').setInputFiles({name:'mission.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...mission,name,files}))});
+    await runMission();
+    await page.getByRole('button',{name:'Iniciar missão',exact:true}).click();
+  }
+  await variant('Vitória rápida',code=>code.replace('Goal = 12','Goal = 1'));
+  await page.getByRole('heading',{name:'Missão cumprida!',exact:true}).waitFor({timeout:15000});
+  await page.screenshot({path:'out/ux/07-orbita-win.png'});
+  await page.getByRole('button',{name:'Jogar novamente',exact:true}).click();
+  await page.locator('.mobileforge-ui #score').getByText('0 / 1 células',{exact:true}).waitFor();
+  await variant('Tempo esgotado',code=>code.replace('Duration = 60f','Duration = 0.3f'));
+  await page.getByRole('heading',{name:'Missão encerrada',exact:true}).waitFor();
+  await page.locator('.mobileforge-ui #summary').getByText(/O tempo acabou/).waitFor();
+  await variant('Impacto fatal',code=>code.replace('Lives = 3;', 'Lives = 1;').replace('Lives = 3;', 'Lives = 1;').replace('new Vector2(180, 100), new Vector2(0, 100), true','new Vector2(180, 450), new Vector2(0, 100), false'));
+  await page.getByRole('heading',{name:'Missão encerrada',exact:true}).waitFor();
+  await page.locator('.mobileforge-ui #summary').getByText(/sem escudo/).waitFor();
+  await page.screenshot({path:'out/ux/08-orbita-loss.png'});
+  console.log('Orbita: touch, UI, pause, slider, restart, win, timer loss, collision loss and offline ZIP passed.');
 
   await context.close();
 }catch(e){console.error(e);process.exitCode=1;}finally{await browser?.close();server.kill();}

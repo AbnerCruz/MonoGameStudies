@@ -18,6 +18,6 @@
     <EmbeddedResource Include="wwwroot/framework/*.cs" LogicalName="MobileForge.Framework.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="wwwroot/framework/**/*.cs;out/**/*.cs" />
+    <Compile Remove="wwwroot/**/*.cs;out/**/*.cs" />
   </ItemGroup>
 </Project>

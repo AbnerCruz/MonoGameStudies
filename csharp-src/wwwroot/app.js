@@ -1,3 +1,4 @@
+import { createExample } from './example.js';
 import { setupStudioUI } from './studio-ui.js';
 import { makeEditor, makeReadOnlyViewer } from './editor.bundle.js';
 import { createPlayer } from './player.js';
@@ -33,100 +34,7 @@ public class MainGame : Game
     }
 }
 `;
-const demoMain=`using MobileForge;
-
-public class MainGame : Game
-{
-    public Player Player = new Player();
-
-    public override void Start()
-    {
-        Player.X = 32;
-        Player.Y = 80;
-    }
-
-    public override void Update(float dt)
-    {
-        Player.Update(dt);
-    }
-
-    public override void Draw()
-    {
-        Clear("#101827");
-        Graphics.Text("Toque para mover", 25, 46, 20);
-        Player.Draw();
-    }
-}
-`;
-const demoPlayer=`using MobileForge;
-
-public class Player
-{
-    public float X, Y;
-
-    public void Update(float dt)
-    {
-        if (Input.Down)
-        {
-            X = Input.X - 24;
-            Y = Input.Y - 24;
-        }
-        if (Input.Key("ArrowRight")) X += 180 * dt;
-        if (Input.Key("ArrowLeft")) X -= 180 * dt;
-    }
-
-    public void Draw()
-    {
-        Graphics.Sprite("hero", X, Y, 3);
-    }
-}
-`;
-const controlsMain=`using MobileForge;
-
-public class MainGame : Game
-{
-    public Vector2 Position = new(150, 280);
-    public float Speed = 180;
-
-    public override void Start()
-    {
-        UI.Set("""
-        <style>
-        .pad { position:absolute; bottom:24px; left:18px; right:18px; display:flex; gap:5px; align-items:end; justify-content:space-between; }
-        .pad button { border:1px solid #80e6b9; border-radius:14px; background:#172e36d9; color:white; padding:8px 10px; font-size:18px; }
-        .pad label { color:#e7f8ef; background:#172e36d9; padding:8px; border-radius:10px; font:12px system-ui; }
-        .pad input { width:90px; }
-        .hud { position:absolute; top:70px; left:22px; font:14px system-ui; color:#80e6b9; }
-        </style>
-        <div class="hud">X: <span id="posicao">150</span> · Colisão: <span id="colisao">Livre</span></div>
-        <div class="pad"><button onPress="Esquerda">◀</button><label>Velocidade <span id="ritmo">180</span><br><input id="velocidade" type="range" min="60" max="360" value="180" onInput="Ajustar"></label><button onPress="Direita">▶</button><button onClick="Passo()">+20</button></div>
-        """);
-        UI.SetValue("velocidade", "180");
-    }
-
-    public void Ajustar(UIEvent e) { Speed = e.Number; }
-    public void Passo() { Position.X += 20; }
-    public override void Update(float dt)
-    {
-        if (UI.Held("Esquerda")) Position.X -= Speed * dt;
-        if (UI.Held("Direita")) Position.X += Speed * dt;
-        Position.X = GameMath.Clamp(Position.X, 0, Width - 32);
-    }
-    public override void Draw()
-    {
-        Clear("#101827");
-        Graphics.Text("Segure os botões para mover", 22, 48, 18);
-        Graphics.Rect(Position.X, Position.Y, 32, 32, "#80e6b9");
-        var contato = Collision.Intersects(new RectF(Position.X, Position.Y, 32, 32), new CircleF(280, 296, 20));
-        Graphics.Circle(280, 296, 20, contato ? "#ffcc92" : "#344e70");
-        UI.SetText("colisao", contato ? "Contato" : "Livre");
-        UI.SetText("posicao", ((int)Position.X).ToString());
-        UI.SetText("ritmo", ((int)Speed).ToString());
-    }
-}
-`;
-const hero=['........','.111111.','12222221','12322321','12333321','12344321','.155551.','..1..1..'].join('').split('').map(n=>({'1':'#344e70','2':'#80e6b9','3':'#f7d28c','4':'#2c314a','5':'#4b7fe3'}[n]||null));
-function newProject(name,example=false){return {id:crypto.randomUUID(),name,updatedAt:Date.now(),active:'MainGame.cs',files:example?[{name:'MainGame.cs',code:demoMain},{name:'Player.cs',code:demoPlayer}]:[{name:'MainGame.cs',code:emptyCode}],sprites:example?[{name:'hero',w:8,h:8,pixels:hero}]:[]};}
+function newProject(name){return {id:crypto.randomUUID(),name,updatedAt:Date.now(),active:'MainGame.cs',files:[{name:'MainGame.cs',code:emptyCode}],sprites:[],tilemaps:[]};}
 const frameworkNames=['Game.cs','Math.cs','Collision.cs','UI.cs'];
 const frameworkCache=new Map();
 function frameworkBrowser(tabs,pane) {
@@ -178,7 +86,7 @@ function renderTree(){const tree=$('fileTree');tree.replaceChildren();if(!projec
 }
 function renderTabs(){$('tabs').replaceChildren();for(const file of project.files){const button=document.createElement('button');button.textContent=file.name.split('/').at(-1);button.title=file.name;button.classList.toggle('selected',file.name===active);button.onclick=()=>selectFile(file.name);$('tabs').append(button);}renderTree();}
 function selectFile(name){$('activePath').textContent=name;active=name;project.active=name;const file=project.files.find(f=>f.name===name);if(!file)return;editor.open(project.id+'/'+name,file.code);editor.diagnostics(file.diagnostics||[]);renderTabs();setExplorer(false);save();}
-function showView(name){view=name;$('workspace').dataset.view=name;document.querySelector('.tabs').hidden=name!=='code';document.querySelector('.filebar').hidden=name!=='code';if(name!=='code')$('workspace').classList.remove('workspace-focus');for(const section of ['code','sprites','game','errors','guide','library'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));if(name==='library')workspaceLibrary.openCurrent();}
+function showView(name){view=name;$('workspace').dataset.view=name;document.querySelector('.tabs').hidden=name!=='code';document.querySelector('.filebar').hidden=name!=='code';if(name!=='code')$('workspace').classList.remove('workspace-focus');for(const section of ['code','sprites','game','errors','library'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));if(name==='library')workspaceLibrary.openCurrent();}
 function currentSprite(){return project?.sprites.find(s=>s.name===activeSprite);}
 function currentMap(){return project?.tilemaps.find(m=>m.name===activeMap);}
 function sheetSize(sprite){return {cw:sprite.cellW||sprite.w,ch:sprite.cellH||sprite.h,cols:Math.floor(sprite.w/(sprite.cellW||sprite.w)),rows:Math.floor(sprite.h/(sprite.cellH||sprite.h))};}
@@ -277,12 +185,9 @@ async function exportGame(){if(!lastBuild||!project||lastBuild.code!==JSON.strin
     download(p.name.replace(/[^a-z0-9_-]/gi,'-')+'.zip',zip,'application/zip');$('runtimeStatus').textContent='ZIP do jogo baixado';notice(`Jogo exportado (${(zip.size/1048576).toFixed(1)} MB). Extraia e abra index.html.`);
   }catch(e){notice(e.message);$('runtimeStatus').textContent='Falha na exportação';}finally{$('exportGame').disabled=false;}}
 $('newProject').onclick=async()=>{const name=await ask('Nome do novo projeto','Meu jogo');if(!name)return;const p=newProject(name);await putProject(p);openProject(p);};
-$('openControls').onclick=async()=>{const p=newProject('Controles e UI');p.files[0].code=controlsMain;await putProject(p);openProject(p);};
 $('openLibrary').onclick=()=>{$('libraryDialog').showModal();homeLibrary.openCurrent();};
 $('closeLibrary').onclick=()=>$('libraryDialog').close();
-$('openLibraryInGuide').onclick=()=>showView('library');
-$('readMathSource').onclick=()=>{showView('library');workspaceLibrary.open('Math.cs');};
-$('openExample').onclick=async()=>{const p=newProject('Exemplo Player',true);await putProject(p);openProject(p);};
+$('openExample').onclick=async()=>{const button=$('openExample');button.disabled=true;try{const p=await createExample();await putProject(p);await openProject(p);}catch(error){notice(error.message);}finally{button.disabled=false;}};
 $('importProject').onclick=()=>$('importInput').click();$('importInput').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const p=JSON.parse(await file.text());if(!p.name||!Array.isArray(p.files)||!p.files.length||p.files.some(f=>!f.name?.endsWith('.cs')||typeof f.code!=='string'))throw new Error('Projeto inválido.');p.id=crypto.randomUUID();p.updatedAt=Date.now();p.sprites??=[];await putProject(p);openProject(p);}catch(error){notice(error.message);}e.target.value='';};
 $('homeButton').onclick=async()=>{clearTimeout(saving);if(project)await putProject(project);home();};
 $('run').onclick=run;$('stop').onclick=()=>{generation++;player?.dispose();player=null;booted=false;$('stop').disabled=true;$('runtimeStatus').textContent='Jogo parado';};

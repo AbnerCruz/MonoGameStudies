@@ -12,6 +12,13 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   let currentMarkup = '', uiEvents = [];
   const appliedUI = new Map();
   const uiHeld = new Set();
+  const heldPointers = new Map();
+  function clearHeld() { heldPointers.clear(); uiHeld.clear(); }
+  function releasePointer(id) {
+    heldPointers.delete(id);
+    uiHeld.clear();
+    for(const {name} of heldPointers.values())uiHeld.add(name);
+  }
   const actionName = /^([A-Za-z_][\w]*)(?:\(\))?$/;
   function alignUI() {
     const fullscreen=document.fullscreenElement;
@@ -28,12 +35,12 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   function renderUI(markup) {
     if (markup === currentMarkup) return;
     currentMarkup = markup;
-    uiHeld.clear();
+    clearHeld();
     appliedUI.clear();
     shadow.replaceChildren();
     if (!markup) return;
     const base=document.createElement('style');
-    base.textContent=':host{font:16px system-ui;color:white}.root{position:relative;width:100%;height:100%;box-sizing:border-box;pointer-events:none}.root [hidden]{display:none!important}.root button,.root input,.root select{pointer-events:auto;touch-action:manipulation;font:inherit}.root button{min-width:44px;min-height:44px;cursor:pointer}';
+    base.textContent=':host{font:16px system-ui;color:white;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.root,.root *{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}.root input:not([type=range]):not([type=button]):not([type=checkbox]):not([type=radio]){user-select:text!important;-webkit-user-select:text!important}.root{position:relative;width:100%;height:100%;box-sizing:border-box;pointer-events:none}.root [hidden]{display:none!important}.root button,.root input,.root select{pointer-events:auto;touch-action:none;font:inherit}.root button{min-width:44px;min-height:44px;cursor:pointer}';
     const root=document.createElement('div');root.className='root';
     const parsed=new DOMParser().parseFromString(markup,'text/html');
     const allowed=new Set(['DIV','SPAN','P','SECTION','HEADER','FOOTER','BUTTON','INPUT','LABEL','IMG','PROGRESS','OUTPUT','STRONG','SMALL','H1','H2','H3','BR','STYLE']);
@@ -60,8 +67,8 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
         if(actionName.test(press?.trim()||'')) {
           const name=press.trim().match(actionName)[1];
           element.style.pointerEvents='auto';
-          element.addEventListener('pointerdown',e=>{e.preventDefault();uiHeld.add(name);element.setPointerCapture(e.pointerId);});
-          for(const event of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(event,()=>uiHeld.delete(name));
+          element.addEventListener('pointerdown',e=>{if(e.button!==0||element.disabled)return;e.preventDefault();heldPointers.set(e.pointerId,{name,element});uiHeld.add(name);element.setPointerCapture(e.pointerId);});
+          for(const event of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(event,e=>releasePointer(e.pointerId));
         }
         copy(node,element);to.append(element);
       }
@@ -77,6 +84,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
       if(state.Text!==null&&state.Text!==undefined&&state.Text!==old.Text)element.textContent=state.Text;
       if(state.Value!==null&&state.Value!==undefined&&state.Value!==old.Value&&'value' in element)element.value=state.Value;
       if(state.Visible!==null&&state.Visible!==undefined&&state.Visible!==old.Visible)element.hidden=!state.Visible;
+      if(state.Visible===false)for(const [pointerId,held] of heldPointers)if(element.contains(held.element))releasePointer(pointerId);
       appliedUI.set(id,{...state});
     }
   }
@@ -87,17 +95,25 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     sprites.set(sprite.name, {surface,cellW:sprite.cellW||sprite.w,cellH:sprite.cellH||sprite.h});
   }
   const controller = new AbortController(), events = { signal: controller.signal };
+  // Suppress native text/drag menus on gameplay surfaces, not in the IDE.
+  const oldCanvasStyle = {userSelect:canvas.style.userSelect, webkitUserSelect:canvas.style.webkitUserSelect, webkitTouchCallout:canvas.style.webkitTouchCallout};
+  Object.assign(canvas.style,{userSelect:'none',webkitUserSelect:'none',webkitTouchCallout:'none'});
+  const textInput = target => target instanceof Element && target.matches('input:not([type=range]):not([type=button]):not([type=checkbox]):not([type=radio]),textarea');
+  for(const name of ['selectstart','dragstart','contextmenu']) {
+    canvas.addEventListener(name,e=>e.preventDefault(),events);
+    shadow.addEventListener(name,e=>{if(!textInput(e.target))e.preventDefault();},events);
+  }
   function position(e) { const b = canvas.getBoundingClientRect(); pointer.x = (e.clientX - b.left) * canvas.width / b.width; pointer.y = (e.clientY - b.top) * canvas.height / b.height; }
-  canvas.addEventListener('pointerdown', e => { position(e); pointer.down = true; canvas.setPointerCapture(e.pointerId); }, events);
+  canvas.addEventListener('pointerdown', e => { e.preventDefault(); position(e); pointer.down = true; canvas.setPointerCapture(e.pointerId); }, events);
   canvas.addEventListener('pointermove', position, events);
   for (const name of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(name, () => pointer.down = false, events);
-  window.addEventListener('keydown', e => { if (document.activeElement?.matches('input,textarea,[contenteditable="true"]')) return; keys.add(e.key); if(e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); }, events);
+  window.addEventListener('keydown', e => { if ((shadow.activeElement||document.activeElement)?.matches('input,textarea,[contenteditable="true"]')) return; keys.add(e.key); if(e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); }, events);
   window.addEventListener('keyup', e => keys.delete(e.key), events);
-  window.addEventListener('blur', () => { keys.clear(); uiHeld.clear(); pointer.down = false; }, events);
-  document.addEventListener('visibilitychange', () => { keys.clear(); uiHeld.clear(); pointer.down = false; last = performance.now(); }, events);
+  window.addEventListener('blur', () => { keys.clear(); clearHeld(); pointer.down = false; }, events);
+  document.addEventListener('visibilitychange', () => { keys.clear(); clearHeld(); pointer.down = false; last = performance.now(); }, events);
   function stop(reason = 'Execução encerrada.') {
     running = false; cancelAnimationFrame(raf); worker?.terminate(); worker = null;
-    renderUI(''); uiEvents=[]; uiHeld.clear();
+    renderUI(''); uiEvents=[]; clearHeld();
     if (workerUrl) URL.revokeObjectURL(workerUrl);
     for (const task of pending.values()) { clearTimeout(task.timer); task.reject(new Error(reason)); } pending.clear();
   }
@@ -178,9 +194,9 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
       return call('boot', payload, 180000);
     },
     compile: files => call('compile', files, 90000),
-    async play(assembly) { await call('load', assembly); await call('start', null, 5000); running = true; last = performance.now(); raf = requestAnimationFrame(tick); },
+    async play(assembly) { frameCount=0;canvas.dataset.frames='0';await call('load', assembly); await call('start', null, 5000); running = true; last = performance.now(); raf = requestAnimationFrame(tick); },
     stop,
-    dispose() { stop(); controller.abort(); uiHost.remove(); },
+    dispose() { stop(); controller.abort(); uiHost.remove();Object.assign(canvas.style,oldCanvasStyle); },
     get frames() { return frameCount; }
   };
 }

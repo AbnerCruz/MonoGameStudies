@@ -41,3 +41,20 @@ A API `Game`, `Input`, `Graphics` é nossa, inspirada no MonoGame; não é o pac
 A tela de código tem ações em menus, explorador recolhível, modo foco, busca, ajuste de fonte e quebra de linhas. Ferramentas de arquivos só aparecem na área de código. Na arte, configurações de células e mapas ficam recolhidas, e o canvas oferece zoom e grade. O CI registra capturas em 390 × 844 e verifica que a interface não transborda horizontalmente.
 
 A área Fonte permite estudar Game.cs, Math.cs, Collision.cs e UI.cs sem criar projeto. Math.cs inclui vetores, interpolação e um gerador aleatório com semente opcional, escolhas, embaralhamento e direções.
+
+## 0.9 — Órbita, tutorial jogável
+
+O botão “Órbita · jogar e aprender” cria uma cópia editável do único exemplo.
+Os cinco arquivos em `wwwroot/examples/` explicam o ciclo completo de um jogo:
+MainGame, Player, FallingItem, Starfield e GameHud. A antiga aba Guia foi removida.
+Projetos vazios continuam apenas com Start, Update e Draw.
+
+A UI continua declarativa em HTML/CSS, com callbacks em C#. A superfície do jogo
+bloqueia seleção, arraste e menu contextual; o editor e os fontes continuam
+selecionáveis. Controles mantidos pressionados rastreiam cada ponteiro, liberando
+corretamente em cancelamento, perda de captura, ocultação e perda de foco.
+
+A CI cobre o núcleo (compilação, sprites, mapas, diagnósticos, ZIP offline) e a
+missão (toque nativo, multitoque, pausa, slider, reinício, vitória e duas derrotas).
+O exemplo real também é exportado e aberto offline. Para os finais, os testes
+reduzem Goal/Duration ou colocam um meteoro na nave usando os mesmos fontes.
