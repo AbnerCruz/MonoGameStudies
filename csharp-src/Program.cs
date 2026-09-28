@@ -47,7 +47,6 @@ public partial class Forge
 
 #if FORGE_EDITOR
     public record SourceFile(string Name, string Code);
-    static string? engine;
     [JSExport]
     public static string Compile(string filesJson)
     {
@@ -55,15 +54,14 @@ public partial class Forge
         {
             var files = JsonSerializer.Deserialize<SourceFile[]>(filesJson, Json)!;
             if (files.Length == 0 || files.Length > 64) throw new Exception("O projeto deve ter de 1 a 64 arquivos.");
-            if (engine is null)
-            {
-                using var stream = typeof(Forge).Assembly.GetManifestResourceStream("ForgeRuntime.Engine.txt")!;
-                using var reader = new StreamReader(stream);
-                engine = reader.ReadToEnd();
-            }
             var parse = new CSharpParseOptions(LanguageVersion.CSharp13);
             var trees = files.Select(f => CSharpSyntaxTree.ParseText(f.Code, parse, path: f.Name)).ToList();
-            trees.Add(CSharpSyntaxTree.ParseText(engine, parse, path: "MobileForge.Engine.cs"));
+            foreach (var name in typeof(Forge).Assembly.GetManifestResourceNames().Where(n => n.StartsWith("MobileForge.Framework.", StringComparison.Ordinal)).OrderBy(n => n))
+            {
+                using var stream = typeof(Forge).Assembly.GetManifestResourceStream(name)!;
+                using var reader = new StreamReader(stream);
+                trees.Add(CSharpSyntaxTree.ParseText(reader.ReadToEnd(), parse, path: name));
+            }
             var compilation = CSharpCompilation.Create("Game_" + Guid.NewGuid().ToString("N"), trees,
                 Basic.Reference.Assemblies.Net90.References.All,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optimizationLevel: OptimizationLevel.Release).WithConcurrentBuild(false));

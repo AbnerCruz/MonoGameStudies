@@ -8,8 +8,8 @@ import { tags } from '@lezer/highlight';
 import { autocompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { undo, redo, indentMore } from '@codemirror/commands';
-const words = ['public','private','protected','class','override','new','using','namespace','float','int','string','bool','void','return','if','else','foreach','for','while','static','readonly','List','Math','MainGame','Game','Start','Update','Draw','Input','Graphics'];
-const members = { Input:['X','Y','Down','Key'], Graphics:['Clear','Rect','Circle','Text','Sprite','Tile','Tilemap'] };
+const words = ['public','private','protected','class','override','new','using','namespace','float','int','string','bool','void','return','if','else','foreach','for','while','static','readonly','List','Math','MainGame','Game','Start','Update','Draw','Input','Graphics','UI','UIEvent','Vector2','RectF','CircleF','Collision','GameMath','Randomizer'];
+const members = { Input:['X','Y','Down','Key'], Graphics:['Clear','Rect','Circle','Text','Sprite','Tile','Tilemap'], UI:['Set','On','Off','Held','Value','Number','Event'], Collision:['Intersects','PointIn','SegmentsIntersect'], GameMath:['Clamp','Lerp','InverseLerp','Remap','SmoothStep','DegreesToRadians','RadiansToDegrees','Wrap'] };
 const theme = EditorView.theme({
   '&': { height:'100%', backgroundColor:'#111216', color:'#dce4f5', fontSize:'var(--code-size,14px)' },
   '.cm-content': { fontFamily:'ui-monospace, SFMono-Regular, Consolas, monospace', caretColor:'#80e6b9', padding:'16px 0' },
@@ -55,4 +55,10 @@ export function makeEditor(parent, onChange) {
     preference(kind,value){if(kind==='wrap'){wrapEnabled=value;editor.dispatch({effects:wrapping.reconfigure(value?EditorView.lineWrapping:[])});}else if(kind==='size')editor.requestMeasure();},
     get(){return editor.state.doc.toString();}
   };
+}
+export function makeReadOnlyViewer(parent) {
+  const viewer=new EditorView({parent,state:EditorState.create({doc:'',extensions:[
+    StreamLanguage.define(csharp),theme,syntaxHighlighting(colors),EditorState.readOnly.of(true),EditorView.editable.of(false),EditorView.lineWrapping
+  ]})});
+  return { show(code) { viewer.dispatch({changes:{from:0,to:viewer.state.doc.length,insert:code}});viewer.scrollDOM.scrollTop=0; } };
 }

@@ -133,5 +133,26 @@ try{
   await page.locator('#run').click();
   await page.getByText(/Actors\/Player.cs:\d+:/).first().waitFor({timeout:180000});
   console.log('Invalid C# diagnostic tied to Actors/Player.cs');
+  await page.locator('#homeButton').click();
+  await page.getByRole('button',{name:'Testar controles e UI'}).click();
+  await page.locator('[data-view=guide]').click();
+  await page.locator('#frameworkTabs button').filter({hasText:'UI.cs'}).click();
+  await page.locator('#frameworkViewer .cm-content').getByText('public static class UI').waitFor();
+  if(await page.locator('#frameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Biblioteca deveria ser somente leitura.');
+  await page.locator('#run').click();
+  await page.waitForFunction(()=>Number(document.querySelector('#canvas').dataset.frames)>4 || document.querySelector('#runtimeStatus').textContent.includes('erro'),null,{timeout:120000});
+  console.log('Controls status:',await page.locator('#runtimeStatus').textContent(),'Diagnostics:',(await page.locator('#diagnostics').innerText()).slice(0,800));
+  await page.locator('.mobileforge-ui button').first().waitFor();
+  const getPosition=()=>page.locator('#canvas').evaluate(canvas=>{const ctx=canvas.getContext('2d');for(let x=0;x<330;x++){const d=ctx.getImageData(x,280,1,1).data;if(d[0]===128&&d[1]===230&&d[2]===185)return x;}return -1;});
+  const before=await getPosition();
+  await page.locator('.mobileforge-ui button').last().click();
+  await page.waitForFunction(old=>{const c=document.querySelector('#canvas'),ctx=c.getContext('2d');return ctx.getImageData(old+20,280,1,1).data[0]===128;},before);
+  const clicked=await getPosition();if(clicked<before+20)throw Error('onClick não moveu o jogo C#.');
+  await page.locator('.mobileforge-ui input[type=range]').fill('300');
+  const right=page.locator('.mobileforge-ui button').nth(1);const bounds=await right.boundingBox();await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);await page.mouse.down();
+  await page.waitForTimeout(250);await page.mouse.up();
+  const after=await getPosition();if(after<=clicked)throw Error('onPress e slider não moveram o jogo.');
+  console.log('UI actions moved rectangle:',before,clicked,after);
+
   await context.close();
 }catch(e){console.error(e);process.exitCode=1;}finally{await browser?.close();server.kill();}

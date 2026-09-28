@@ -1,5 +1,5 @@
 import { setupStudioUI } from './studio-ui.js';
-import { makeEditor } from './editor.bundle.js';
+import { makeEditor, makeReadOnlyViewer } from './editor.bundle.js';
 import { createPlayer } from './player.js';
 import { forgeWorker } from './worker.js';
 import { bootStandalone } from './standalone.js';
@@ -81,8 +81,53 @@ public class Player
     }
 }
 `;
+const controlsMain=`using MobileForge;
+
+public class MainGame : Game
+{
+    public Vector2 Position = new(150, 280);
+    public float Speed = 180;
+
+    public override void Start()
+    {
+        UI.Set("""
+        <style>
+        .pad { position:absolute; bottom:24px; left:18px; right:18px; display:flex; gap:12px; align-items:end; justify-content:space-between; }
+        .pad button { border:1px solid #80e6b9; border-radius:14px; background:#172e36d9; color:white; padding:12px 20px; font-size:22px; }
+        .pad label { color:#e7f8ef; background:#172e36d9; padding:8px; border-radius:10px; font:12px system-ui; }
+        </style>
+        <div class="pad"><button onPress="Esquerda">◀</button><label>Velocidade<br><input id="velocidade" type="range" min="60" max="360" value="180" onInput="Ajustar"></label><button onPress="Direita">▶</button><button onClick="Passo()">+20</button></div>
+        """);
+    }
+
+    public void Ajustar(UIEvent e) { Speed = e.Number; }
+    public void Passo() { Position.X += 20; }
+    public override void Update(float dt)
+    {
+        if (UI.Held("Esquerda")) Position.X -= Speed * dt;
+        if (UI.Held("Direita")) Position.X += Speed * dt;
+        Position.X = GameMath.Clamp(Position.X, 0, Width - 32);
+    }
+    public override void Draw()
+    {
+        Clear("#101827");
+        Graphics.Text("Segure os botões para mover", 22, 48, 18);
+        Graphics.Rect(Position.X, Position.Y, 32, 32, "#80e6b9");
+    }
+}
+`;
 const hero=['........','.111111.','12222221','12322321','12333321','12344321','.155551.','..1..1..'].join('').split('').map(n=>({'1':'#344e70','2':'#80e6b9','3':'#f7d28c','4':'#2c314a','5':'#4b7fe3'}[n]||null));
 function newProject(name,example=false){return {id:crypto.randomUUID(),name,updatedAt:Date.now(),active:'MainGame.cs',files:example?[{name:'MainGame.cs',code:demoMain},{name:'Player.cs',code:demoPlayer}]:[{name:'MainGame.cs',code:emptyCode}],sprites:example?[{name:'hero',w:8,h:8,pixels:hero}]:[]};}
+let libraryViewer=null;
+const frameworkNames=['Game.cs','Math.cs','Collision.cs','UI.cs'];
+async function showFramework(name) {
+  const pane=$('frameworkViewer');pane.textContent='Carregando biblioteca…';
+  try {const response=await fetch('./framework/'+name);if(!response.ok)throw Error('Arquivo indisponível');
+    pane.replaceChildren();libraryViewer=makeReadOnlyViewer(pane);libraryViewer.show(await response.text());
+    $('frameworkTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.textContent===name));
+  }catch(error){pane.textContent=error.message;}
+}
+for(const name of frameworkNames){const button=document.createElement('button');button.textContent=name;button.onclick=()=>showFramework(name);$('frameworkTabs').append(button);}
 let project=null, active='', view='code', editor, player, booted=false, lastBuild=null, saving=null, generation=0;
 let activeSprite='', spriteTool='pencil', selectedTile=0, spriteUndo=[], spriteRedo=[], activeMap='', mapTool='pencil', mapTile=0, assetMode='sprites';
 const palette=['#101827','#ffffff','#80e6b9','#76d4dc','#ffcc92','#ff8d9c','#c5a3ff','#4b7fe3','#344e70','#f7d28c'];
@@ -213,6 +258,7 @@ async function exportGame(){if(!lastBuild||!project||lastBuild.code!==JSON.strin
     download(p.name.replace(/[^a-z0-9_-]/gi,'-')+'.zip',zip,'application/zip');$('runtimeStatus').textContent='ZIP do jogo baixado';notice(`Jogo exportado (${(zip.size/1048576).toFixed(1)} MB). Extraia e abra index.html.`);
   }catch(e){notice(e.message);$('runtimeStatus').textContent='Falha na exportação';}finally{$('exportGame').disabled=false;}}
 $('newProject').onclick=async()=>{const name=await ask('Nome do novo projeto','Meu jogo');if(!name)return;const p=newProject(name);await putProject(p);openProject(p);};
+$('openControls').onclick=async()=>{const p=newProject('Controles e UI');p.files[0].code=controlsMain;await putProject(p);openProject(p);};
 $('openExample').onclick=async()=>{const p=newProject('Exemplo Player',true);await putProject(p);openProject(p);};
 $('importProject').onclick=()=>$('importInput').click();$('importInput').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const p=JSON.parse(await file.text());if(!p.name||!Array.isArray(p.files)||!p.files.length||p.files.some(f=>!f.name?.endsWith('.cs')||typeof f.code!=='string'))throw new Error('Projeto inválido.');p.id=crypto.randomUUID();p.updatedAt=Date.now();p.sprites??=[];await putProject(p);openProject(p);}catch(error){notice(error.message);}e.target.value='';};
 $('homeButton').onclick=async()=>{clearTimeout(saving);if(project)await putProject(project);home();};
@@ -283,5 +329,6 @@ document.querySelectorAll('.typing-tools button').forEach(b=>b.onclick=()=>edito
 window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();if(project){clearTimeout(saving);project.updatedAt=Date.now();putProject(project).then(()=>$('saveStatus').textContent='Salvo neste navegador').catch(error=>notice(error.message));}}});
 window.addEventListener('pagehide',()=>{if(project)putProject(project);});
 setupStudioUI();
+showFramework('Game.cs');
 document.addEventListener('forge:editor',event=>{if(!editor)return;const {kind,value}=event.detail;if(kind==='search'){showView('code');editor.search();}else editor.preference(kind,value);});
 home().catch(e=>notice('Armazenamento indisponível: '+e.message));

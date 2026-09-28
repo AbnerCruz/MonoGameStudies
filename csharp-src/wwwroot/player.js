@@ -4,6 +4,68 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   let worker, workerUrl, serial = 0, running = false, raf = 0, last = 0, frameCount = 0;
   const pending = new Map(), keys = new Set(), sprites = new Map(), tilemaps = new Map(maps.map(map=>[map.name,map]));
   const pointer = { x: 0, y: 0, down: false };
+  const uiHost = document.createElement('div');
+  uiHost.className = 'mobileforge-ui';
+  Object.assign(uiHost.style, {position:'fixed', zIndex:'5', pointerEvents:'none', overflow:'hidden'});
+  document.body.append(uiHost);
+  const shadow = uiHost.attachShadow({mode:'open'});
+  let currentMarkup = '', uiEvents = [];
+  const uiHeld = new Set();
+  const actionName = /^([A-Za-z_][\w]*)(?:\(\))?$/;
+  function alignUI() {
+    const fullscreen=document.fullscreenElement;
+    const parent=fullscreen?.contains(canvas)?fullscreen:document.body;
+    if(uiHost.parentElement!==parent)parent.append(uiHost);
+    const rect=canvas.getBoundingClientRect();
+    Object.assign(uiHost.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});
+  }
+  function uiAction(raw, element) {
+    const match=raw?.trim().match(actionName);
+    if (match) uiEvents.push({name:match[1],id:element.id||'',value:String(element.value??'')});
+    return match?.[1];
+  }
+  function renderUI(markup) {
+    if (markup === currentMarkup) return;
+    currentMarkup = markup;
+    uiHeld.clear();
+    shadow.replaceChildren();
+    if (!markup) return;
+    const base=document.createElement('style');
+    base.textContent=':host{font:16px system-ui;color:white}.root{position:relative;width:100%;height:100%;box-sizing:border-box;pointer-events:none}.root button,.root input,.root select{pointer-events:auto;touch-action:manipulation;font:inherit}.root button{min-width:44px;min-height:44px;cursor:pointer}';
+    const root=document.createElement('div');root.className='root';
+    const parsed=new DOMParser().parseFromString(markup,'text/html');
+    const allowed=new Set(['DIV','SPAN','P','SECTION','HEADER','FOOTER','BUTTON','INPUT','LABEL','IMG','PROGRESS','OUTPUT','STRONG','SMALL','H1','H2','H3','BR','STYLE']);
+    const attributes=new Set(['class','id','title','type','value','min','max','step','placeholder','disabled','for','alt','src','style','aria-label','role']);
+    function copy(from,to) {
+      for(const node of from.childNodes) {
+        if(node.nodeType===Node.TEXT_NODE){to.append(document.createTextNode(node.textContent));continue;}
+        if(node.nodeType!==Node.ELEMENT_NODE||!allowed.has(node.tagName))continue;
+        const element=document.createElement(node.tagName.toLowerCase());
+        if(node.tagName==='STYLE') { element.textContent=node.textContent;to.append(element);continue; }
+        for(const attr of node.attributes) {
+          const key=attr.name.toLowerCase();
+          if(attributes.has(key)) {
+            if(key==='src') { if(node.tagName==='IMG'&&attr.value.startsWith('sprite:')){const asset=sprites.get(attr.value.slice(7));if(asset)element.src=asset.surface.toDataURL();} }
+            else if(key==='style'&&!/url\s*\(|@import/i.test(attr.value))element.setAttribute(attr.name,attr.value);
+            else if(key!=='style')element.setAttribute(attr.name,attr.value);
+          }
+        }
+        for(const [attribute,event] of [['onclick','click'],['oninput','input'],['onchange','change']]) {
+          const action=node.getAttribute(attribute);
+          if(actionName.test(action?.trim()||''))element.addEventListener(event,()=>uiAction(action,element));
+        }
+        const press=node.getAttribute('onpress');
+        if(actionName.test(press?.trim()||'')) {
+          const name=press.trim().match(actionName)[1];
+          element.addEventListener('pointerdown',e=>{e.preventDefault();uiHeld.add(name);element.setPointerCapture(e.pointerId);});
+          for(const event of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(event,()=>uiHeld.delete(name));
+        }
+        copy(node,element);to.append(element);
+      }
+    }
+    copy(parsed.head,root);copy(parsed.body,root);
+    shadow.append(base,root);alignUI();
+  }
   for (const sprite of assets) {
     const surface = document.createElement('canvas'); surface.width = sprite.w; surface.height = sprite.h;
     const sc = surface.getContext('2d');
@@ -17,10 +79,11 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
   for (const name of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(name, () => pointer.down = false, events);
   window.addEventListener('keydown', e => { if (document.activeElement?.matches('input,textarea,[contenteditable="true"]')) return; keys.add(e.key); if(e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault(); }, events);
   window.addEventListener('keyup', e => keys.delete(e.key), events);
-  window.addEventListener('blur', () => { keys.clear(); pointer.down = false; }, events);
-  document.addEventListener('visibilitychange', () => { keys.clear(); pointer.down = false; last = performance.now(); }, events);
+  window.addEventListener('blur', () => { keys.clear(); uiHeld.clear(); pointer.down = false; }, events);
+  document.addEventListener('visibilitychange', () => { keys.clear(); uiHeld.clear(); pointer.down = false; last = performance.now(); }, events);
   function stop(reason = 'Execução encerrada.') {
     running = false; cancelAnimationFrame(raf); worker?.terminate(); worker = null;
+    renderUI(''); uiEvents=[]; uiHeld.clear();
     if (workerUrl) URL.revokeObjectURL(workerUrl);
     for (const task of pending.values()) { clearTimeout(task.timer); task.reject(new Error(reason)); } pending.clear();
   }
@@ -59,9 +122,11 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     if (!running) return;
     const dt = Math.min((now-last)/1000, .05); last = now;
     try {
-      const result = await call('frame', { ...pointer, keys: [...keys], dt }, 3000);
+      alignUI();
+      const outgoing=uiEvents;uiEvents=[];
+      const result = await call('frame', { ...pointer, keys: [...keys], dt, uiEvents:outgoing, uiHeld:[...uiHeld] }, 3000);
       if (!running) return;
-      draw(result.commands); frameCount++; canvas.dataset.frames = frameCount;
+      draw(result.commands);renderUI(result.ui||''); frameCount++; canvas.dataset.frames = frameCount;
       raf = requestAnimationFrame(tick);
     } catch (error) { if (running) { stop(); onError(error); } }
   }
@@ -101,7 +166,7 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
     compile: files => call('compile', files, 90000),
     async play(assembly) { await call('load', assembly); await call('start', null, 5000); running = true; last = performance.now(); raf = requestAnimationFrame(tick); },
     stop,
-    dispose() { stop(); controller.abort(); },
+    dispose() { stop(); controller.abort(); uiHost.remove(); },
     get frames() { return frameCount; }
   };
 }

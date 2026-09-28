@@ -15,6 +15,6 @@
   <ItemGroup Condition="'$(ForgePlayer)' != 'true'">
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageReference Include="Basic.Reference.Assemblies.Net90" Version="1.8.3" />
-    <EmbeddedResource Include="Engine.txt" />
+    <EmbeddedResource Include="wwwroot/framework/*.cs" LogicalName="MobileForge.Framework.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

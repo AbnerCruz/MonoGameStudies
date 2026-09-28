@@ -50,7 +50,9 @@ namespace MobileForge
             Input.Down = false;
             Input.Keys.Clear();
             Graphics.Commands.Clear();
+            UI.Reset();
             game = new global::MainGame();
+            UI.Bind(game);
             game.Start();
         }
         public static string Frame(string json)
@@ -62,10 +64,11 @@ namespace MobileForge
             Input.Down = data.GetProperty("down").GetBoolean();
             Input.Keys.Clear();
             foreach (var key in data.GetProperty("keys").EnumerateArray()) Input.Keys.Add(key.GetString()!);
+            UI.Receive(data);
             Graphics.Commands.Clear();
             game.Update(Math.Clamp(data.GetProperty("dt").GetSingle(), 0, 0.05f));
             game.Draw();
-            return JsonSerializer.Serialize(new { ok = true, commands = Graphics.Commands });
+            return JsonSerializer.Serialize(new { ok = true, commands = Graphics.Commands, ui = UI.Markup });
         }
     }
 }

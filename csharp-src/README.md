@@ -10,6 +10,9 @@ Prova técnica mobile-first: editor de C# com Roslyn rodando em WebAssembly dent
 - O explorador aceita caminhos como `Actors/Player.cs`, com busca e pastas no editor. `MainGame.cs` continua na raiz do projeto. Cada arquivo mantém seu cursor e histórico de desfazer ao trocar de aba.
 - Aba Sprites desenha pixels, importa/exporta PNG, edita células de spritesheet, dispõe de ferramentas de balde, conta-gotas, desfazer/refazer e permite pintar tilemaps.
 - `Graphics.Tile` e `Graphics.Tilemap` desenham as peças no jogo C#.
+- Bibliotecas em `wwwroot/framework/`: `Game.cs`, `Math.cs`, `Collision.cs`, `UI.cs`. São os mesmos arquivos embutidos no compilador e exibidos em modo somente leitura no Guia.
+- UI aceita HTML/CSS declarativo, `onClick`, `onInput`, `onChange`, `onPress` e callbacks de C#, com controles posicionados sobre o canvas e sprites em `<img src="sprite:hero">`.
+- `Vector2`, `GameMath`, `Randomizer`, `RectF`, `CircleF`, `Collision` oferecem matemática e consultas de geometria sem regras de movimento impostas.
 - Exportação é um ZIP com `index.html`, `game.js`, `game-data.js` e `runtime-data.js`, todos diretamente na raiz. É necessário extraí-los juntos. A estrutura de pastas do código no editor não é exportada para o jogo compilado.
 
 ## Build
@@ -31,8 +34,8 @@ Para testar localmente, sirva `wwwroot` com um servidor HTTP. O CI executa um te
 
 ## Limites
 
-A API `Game`, `Input`, `Graphics` é nossa, inspirada no MonoGame; não é o pacote MonoGame. Ainda faltam física, UI pronta, áudio, NuGet, camadas e ferramentas avançadas de tilemap. O autocomplete atual é lexical, não semântico. A máquina deve suportar WebAssembly e `DecompressionStream`. Alguns provedores `content://` do Android bloqueiam scripts vizinhos ao abrir o `index.html` localmente; o ZIP extraído funciona como site estático. A primeira compilação carrega Roslyn e referências .NET, e pode consumir muita memória em aparelhos modestos. Os testes em Chromium não substituem um teste físico no Moto g32.
+A API `Game`, `Input`, `Graphics` é nossa, inspirada no MonoGame; não é o pacote MonoGame. Não há simulação automática de física, áudio, NuGet, camadas e ferramentas avançadas de tilemap. O autocomplete atual é lexical, não semântico. A máquina deve suportar WebAssembly e `DecompressionStream`. Alguns provedores `content://` do Android bloqueiam scripts vizinhos ao abrir o `index.html` localmente; o ZIP extraído funciona como site estático. A primeira compilação carrega Roslyn e referências .NET, e pode consumir muita memória em aparelhos modestos. Os testes em Chromium não substituem um teste físico no Moto g32.
 
-## Interface 0.6.0
+## Interface 0.7.0
 
 A tela de código tem ações em menus, explorador recolhível, modo foco, busca, ajuste de fonte e quebra de linhas. Ferramentas de arquivos só aparecem na área de código. Na arte, configurações de células e mapas ficam recolhidas, e o canvas oferece zoom e grade. O CI registra capturas em 390 × 844 e verifica que a interface não transborda horizontalmente.
