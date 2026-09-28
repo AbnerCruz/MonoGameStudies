@@ -38,10 +38,10 @@ jobs:
       - name: Publish editor and player runtimes
         working-directory: csharp-src
         run: |
-          dotnet publish ForgeRuntime.csproj -c Release -o out/editor
-          dotnet publish ForgeRuntime.csproj -c Release -o out/player -p:ForgePlayer=true
-          cp -R out/editor/wwwroot/_framework wwwroot/_framework
-          python scripts/pack.py out/player/wwwroot wwwroot/player-framework.pack.gz
+          dotnet publish ForgeRuntime.csproj -c Release -o "$RUNNER_TEMP/mobileforge-editor"
+          dotnet publish ForgeRuntime.csproj -c Release -o "$RUNNER_TEMP/mobileforge-player" -p:ForgePlayer=true
+          cp -R "$RUNNER_TEMP/mobileforge-editor/wwwroot/_framework" wwwroot/_framework
+          python scripts/pack.py "$RUNNER_TEMP/mobileforge-player/wwwroot" wwwroot/player-framework.pack.gz
       - name: Compile, play and open exported ZIP offline
         working-directory: csharp-src
         run: node scripts/smoke.mjs

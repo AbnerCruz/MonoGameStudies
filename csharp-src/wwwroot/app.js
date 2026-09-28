@@ -127,16 +127,26 @@ public class MainGame : Game
 `;
 const hero=['........','.111111.','12222221','12322321','12333321','12344321','.155551.','..1..1..'].join('').split('').map(n=>({'1':'#344e70','2':'#80e6b9','3':'#f7d28c','4':'#2c314a','5':'#4b7fe3'}[n]||null));
 function newProject(name,example=false){return {id:crypto.randomUUID(),name,updatedAt:Date.now(),active:'MainGame.cs',files:example?[{name:'MainGame.cs',code:demoMain},{name:'Player.cs',code:demoPlayer}]:[{name:'MainGame.cs',code:emptyCode}],sprites:example?[{name:'hero',w:8,h:8,pixels:hero}]:[]};}
-let libraryViewer=null;
 const frameworkNames=['Game.cs','Math.cs','Collision.cs','UI.cs'];
-async function showFramework(name) {
-  const pane=$('frameworkViewer');pane.textContent='Carregando biblioteca…';
-  try {const response=await fetch('./framework/'+name);if(!response.ok)throw Error('Arquivo indisponível');
-    pane.replaceChildren();libraryViewer=makeReadOnlyViewer(pane);libraryViewer.show(await response.text());
-    $('frameworkTabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.textContent===name));
-  }catch(error){pane.textContent=error.message;}
+const frameworkCache=new Map();
+function frameworkBrowser(tabs,pane) {
+  let viewer=null, selected='Game.cs', request=0;
+  async function open(name) {
+    selected=name;const current=++request;
+    tabs.querySelectorAll('button').forEach(button=>button.classList.toggle('selected',button.textContent===name));
+    viewer??=makeReadOnlyViewer(pane);
+    viewer.show('// Carregando '+name+'…');
+    try {
+      if(!frameworkCache.has(name))frameworkCache.set(name,fetch('./framework/'+name).then(response=>{if(!response.ok)throw Error('Arquivo indisponível: '+name);return response.text();}));
+      const code=await frameworkCache.get(name);
+      if(current===request)viewer.show(code);
+    }catch(error){frameworkCache.delete(name);if(current===request)viewer.show('// '+error.message);}
+  }
+  for(const name of frameworkNames){const button=document.createElement('button');button.textContent=name;button.onclick=()=>open(name);tabs.append(button);}
+  return {openCurrent:()=>open(selected),open};
 }
-for(const name of frameworkNames){const button=document.createElement('button');button.textContent=name;button.onclick=()=>showFramework(name);$('frameworkTabs').append(button);}
+const workspaceLibrary=frameworkBrowser($('frameworkTabs'),$('frameworkViewer'));
+const homeLibrary=frameworkBrowser($('homeFrameworkTabs'),$('homeFrameworkViewer'));
 let project=null, active='', view='code', editor, player, booted=false, lastBuild=null, saving=null, generation=0;
 let activeSprite='', spriteTool='pencil', selectedTile=0, spriteUndo=[], spriteRedo=[], activeMap='', mapTool='pencil', mapTile=0, assetMode='sprites';
 const palette=['#101827','#ffffff','#80e6b9','#76d4dc','#ffcc92','#ff8d9c','#c5a3ff','#4b7fe3','#344e70','#f7d28c'];
@@ -168,7 +178,7 @@ function renderTree(){const tree=$('fileTree');tree.replaceChildren();if(!projec
 }
 function renderTabs(){$('tabs').replaceChildren();for(const file of project.files){const button=document.createElement('button');button.textContent=file.name.split('/').at(-1);button.title=file.name;button.classList.toggle('selected',file.name===active);button.onclick=()=>selectFile(file.name);$('tabs').append(button);}renderTree();}
 function selectFile(name){$('activePath').textContent=name;active=name;project.active=name;const file=project.files.find(f=>f.name===name);if(!file)return;editor.open(project.id+'/'+name,file.code);editor.diagnostics(file.diagnostics||[]);renderTabs();setExplorer(false);save();}
-function showView(name){view=name;$('workspace').dataset.view=name;document.querySelector('.tabs').hidden=name!=='code';document.querySelector('.filebar').hidden=name!=='code';if(name!=='code')$('workspace').classList.remove('workspace-focus');for(const section of ['code','sprites','game','errors','guide'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));}
+function showView(name){view=name;$('workspace').dataset.view=name;document.querySelector('.tabs').hidden=name!=='code';document.querySelector('.filebar').hidden=name!=='code';if(name!=='code')$('workspace').classList.remove('workspace-focus');for(const section of ['code','sprites','game','errors','guide','library'])$(section+'View').hidden=section!==name;document.querySelectorAll('.bottom-nav button').forEach(b=>b.classList.toggle('selected',b.dataset.view===name));if(name==='library')workspaceLibrary.openCurrent();}
 function currentSprite(){return project?.sprites.find(s=>s.name===activeSprite);}
 function currentMap(){return project?.tilemaps.find(m=>m.name===activeMap);}
 function sheetSize(sprite){return {cw:sprite.cellW||sprite.w,ch:sprite.cellH||sprite.h,cols:Math.floor(sprite.w/(sprite.cellW||sprite.w)),rows:Math.floor(sprite.h/(sprite.cellH||sprite.h))};}
@@ -268,6 +278,10 @@ async function exportGame(){if(!lastBuild||!project||lastBuild.code!==JSON.strin
   }catch(e){notice(e.message);$('runtimeStatus').textContent='Falha na exportação';}finally{$('exportGame').disabled=false;}}
 $('newProject').onclick=async()=>{const name=await ask('Nome do novo projeto','Meu jogo');if(!name)return;const p=newProject(name);await putProject(p);openProject(p);};
 $('openControls').onclick=async()=>{const p=newProject('Controles e UI');p.files[0].code=controlsMain;await putProject(p);openProject(p);};
+$('openLibrary').onclick=()=>{$('libraryDialog').showModal();homeLibrary.openCurrent();};
+$('closeLibrary').onclick=()=>$('libraryDialog').close();
+$('openLibraryInGuide').onclick=()=>showView('library');
+$('readMathSource').onclick=()=>{showView('library');workspaceLibrary.open('Math.cs');};
 $('openExample').onclick=async()=>{const p=newProject('Exemplo Player',true);await putProject(p);openProject(p);};
 $('importProject').onclick=()=>$('importInput').click();$('importInput').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const p=JSON.parse(await file.text());if(!p.name||!Array.isArray(p.files)||!p.files.length||p.files.some(f=>!f.name?.endsWith('.cs')||typeof f.code!=='string'))throw new Error('Projeto inválido.');p.id=crypto.randomUUID();p.updatedAt=Date.now();p.sprites??=[];await putProject(p);openProject(p);}catch(error){notice(error.message);}e.target.value='';};
 $('homeButton').onclick=async()=>{clearTimeout(saving);if(project)await putProject(project);home();};
@@ -338,6 +352,5 @@ document.querySelectorAll('.typing-tools button').forEach(b=>b.onclick=()=>edito
 window.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'){event.preventDefault();if(project){clearTimeout(saving);project.updatedAt=Date.now();putProject(project).then(()=>$('saveStatus').textContent='Salvo neste navegador').catch(error=>notice(error.message));}}});
 window.addEventListener('pagehide',()=>{if(project)putProject(project);});
 setupStudioUI();
-showFramework('Game.cs');
 document.addEventListener('forge:editor',event=>{if(!editor)return;const {kind,value}=event.detail;if(kind==='search'){showView('code');editor.search();}else editor.preference(kind,value);});
 home().catch(e=>notice('Armazenamento indisponível: '+e.message));

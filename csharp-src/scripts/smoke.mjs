@@ -14,6 +14,13 @@ try{
   page.on('console',m=>console.log('Browser '+m.type()+':',m.text().slice(0,500)));page.on('requestfailed',r=>console.log('Request failed:',r.url(),r.failure()?.errorText));page.on('pageerror',e=>console.log('Page error:',e.message));
   await page.goto('http://127.0.0.1:8791/',{waitUntil:'networkidle'});
   await page.screenshot({path:'out/ux/01-projects.png'});
+  await page.locator('#openLibrary').click();
+  await page.locator('#homeFrameworkTabs button').filter({hasText:'Math.cs'}).click();
+  await page.locator('#homeFrameworkViewer .cm-content').getByText('public struct Vector2').waitFor();
+  if(!(await page.locator('#homeFrameworkViewer .cm-content').innerText()).includes('public sealed class Randomizer'))throw Error('Math.cs não mostra a biblioteca completa.');
+  if(await page.locator('#homeFrameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Fonte da engine está editável.');
+  await page.locator('#closeLibrary').click();
+
   await page.locator('#newProject').click();
   await page.locator('#dialogInput').fill('Projeto vazio');
   await page.locator('#nameDialog button[value=ok]').click();
@@ -136,6 +143,9 @@ try{
   await page.locator('#homeButton').click();
   await page.getByRole('button',{name:'Testar controles e UI'}).click();
   await page.locator('[data-view=guide]').click();
+  await page.locator('#readMathSource').click();
+  if(!await page.locator('#libraryView').isVisible()||!await page.locator('#frameworkTabs button').filter({hasText:'Math.cs'}).evaluate(button=>button.classList.contains('selected')))throw Error('O Guia não abre Math.cs diretamente.');
+  await page.locator('#frameworkViewer .cm-content').getByText('public struct Vector2').waitFor();
   await page.locator('#frameworkTabs button').filter({hasText:'UI.cs'}).click();
   await page.locator('#frameworkViewer .cm-content').getByText('public static class UI').waitFor();
   if(await page.locator('#frameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Biblioteca deveria ser somente leitura.');

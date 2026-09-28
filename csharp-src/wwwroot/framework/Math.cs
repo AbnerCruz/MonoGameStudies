@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace MobileForge
 {
@@ -12,6 +13,8 @@ namespace MobileForge
         public float LengthSquared => X * X + Y * Y;
         public float Length => MathF.Sqrt(LengthSquared);
         public Vector2 Normalized => Length > 0 ? this / Length : Zero;
+        public float Angle => MathF.Atan2(Y, X);
+        public Vector2 Perpendicular => new(-Y, X);
         public static Vector2 operator +(Vector2 a, Vector2 b) => new(a.X + b.X, a.Y + b.Y);
         public static Vector2 operator -(Vector2 a, Vector2 b) => new(a.X - b.X, a.Y - b.Y);
         public static Vector2 operator -(Vector2 a) => new(-a.X, -a.Y);
@@ -29,8 +32,15 @@ namespace MobileForge
         public static float Distance(Vector2 a, Vector2 b) => (a - b).Length;
         public static Vector2 Lerp(Vector2 a, Vector2 b, float t) => a + (b - a) * t;
         public static Vector2 Reflect(Vector2 direction, Vector2 normal) => direction - 2 * Dot(direction, normal) * normal;
+        public static Vector2 FromAngle(float radians) => new(MathF.Cos(radians), MathF.Sin(radians));
+        public static Vector2 Project(Vector2 value, Vector2 onto)
+            => onto.LengthSquared == 0 ? Zero : onto * (Dot(value, onto) / onto.LengthSquared);
         public static Vector2 Rotate(Vector2 value, float radians) => new(value.X * MathF.Cos(radians) - value.Y * MathF.Sin(radians), value.X * MathF.Sin(radians) + value.Y * MathF.Cos(radians));
-        public static Vector2 ClampMagnitude(Vector2 value, float maximum) => value.LengthSquared > maximum * maximum ? value.Normalized * MathF.Max(0, maximum) : value;
+        public static Vector2 ClampMagnitude(Vector2 value, float maximum)
+        {
+            maximum = MathF.Max(0, maximum);
+            return value.LengthSquared > maximum * maximum ? value.Normalized * maximum : value;
+        }
         public static Vector2 MoveTowards(Vector2 current, Vector2 target, float distance)
         {
             var delta = target - current;
@@ -62,6 +72,20 @@ namespace MobileForge
         public float Float() => random.NextSingle();
         public float Range(float min, float max) => min + Float() * (max - min);
         public bool Chance(float probability) => Float() < GameMath.Clamp(probability, 0, 1);
+        public Vector2 Direction() => Vector2.FromAngle(Range(0f, GameMath.Tau));
+        public T Pick<T>(IReadOnlyList<T> items)
+        {
+            if (items.Count == 0) throw new ArgumentException("A coleção precisa ter pelo menos um item.", nameof(items));
+            return items[Int(0, items.Count)];
+        }
+        public void Shuffle<T>(IList<T> items)
+        {
+            for (var i = items.Count - 1; i > 0; i--)
+            {
+                var j = Int(0, i + 1);
+                (items[i], items[j]) = (items[j], items[i]);
+            }
+        }
         public Vector2 InsideCircle(float radius = 1)
         {
             var angle = Range(0, GameMath.Tau);

@@ -17,4 +17,7 @@
     <PackageReference Include="Basic.Reference.Assemblies.Net90" Version="1.8.3" />
     <EmbeddedResource Include="wwwroot/framework/*.cs" LogicalName="MobileForge.Framework.%(Filename)%(Extension)" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="wwwroot/framework/**/*.cs;out/**/*.cs" />
+  </ItemGroup>
 </Project>
