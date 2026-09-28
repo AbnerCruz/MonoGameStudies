@@ -17,7 +17,8 @@ try{
   await page.locator('#openLibrary').click();
   await page.locator('#homeFrameworkTabs button').filter({hasText:'Math.cs'}).click();
   await page.locator('#homeFrameworkViewer .cm-content').getByText('public struct Vector2').waitFor();
-  if(!(await page.locator('#homeFrameworkViewer .cm-content').innerText()).includes('public sealed class Randomizer'))throw Error('Math.cs não mostra a biblioteca completa.');
+  await page.locator('#homeFrameworkViewer .cm-scroller').evaluate(el=>el.scrollTop=el.scrollHeight);
+  await page.locator('#homeFrameworkViewer .cm-content').getByText('public sealed class Randomizer').waitFor();
   if(await page.locator('#homeFrameworkViewer .cm-content').getAttribute('contenteditable')!=='false')throw Error('Fonte da engine está editável.');
   await page.locator('#closeLibrary').click();
 
