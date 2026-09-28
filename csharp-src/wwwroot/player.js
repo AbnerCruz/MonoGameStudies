@@ -52,11 +52,12 @@ export function createPlayer(canvas, workerSource, assets = [], onError = consol
         }
         for(const [attribute,event] of [['onclick','click'],['oninput','input'],['onchange','change']]) {
           const action=node.getAttribute(attribute);
-          if(actionName.test(action?.trim()||''))element.addEventListener(event,()=>uiAction(action,element));
+          if(actionName.test(action?.trim()||'')){element.style.pointerEvents='auto';element.addEventListener(event,()=>uiAction(action,element));}
         }
         const press=node.getAttribute('onpress');
         if(actionName.test(press?.trim()||'')) {
           const name=press.trim().match(actionName)[1];
+          element.style.pointerEvents='auto';
           element.addEventListener('pointerdown',e=>{e.preventDefault();uiHeld.add(name);element.setPointerCapture(e.pointerId);});
           for(const event of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(event,()=>uiHeld.delete(name));
         }
